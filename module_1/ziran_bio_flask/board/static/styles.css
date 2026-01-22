@@ -1,31 +1,11 @@
-* {
-  box-sizing: border-box;
-}
+/* ========= Base ========= */
+* { box-sizing: border-box; }
 
 body {
   font-family: sans-serif;
   font-size: 20px;
-  margin: 0 auto;
+  margin: 0;
   text-align: center;
-}
-
-a,
-a:visited {
-  color: #007bff;
-}
-
-a:hover {
-  color: #0056b3;
-}
-
-nav ul {
-  list-style-type: none;
-  padding: 0;
-}
-
-nav ul li {
-  display: inline;
-  margin: 0 5px;
 }
 
 main {
@@ -33,76 +13,81 @@ main {
   margin: 0 auto;
 }
 
-.home-container {
+/* Global links (content area) */
+main a,
+main a:visited {
+  color: #007bff;
+}
+
+main a:hover {
+  color: #0056b3;
+}
+
+/* ===== NAV (TOP RIGHT) ===== */
+.nav-header {
+  width: 100%;
   display: flex;
-  gap: 30px;
-  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 12px 20px;
 }
 
-.home-text {
-  flex: 2;
-}
-
-.home-image {
-  flex: 1;
-}
-
-.home-image img {
-  max-width: 100%;
-  border-radius: 8px;
-}
-
-/* Navigation bar container */
+/* nav bar container */
 .nav {
-  display: flex;
+  display: inline-flex;
   gap: 12px;
-  background-color: #1f6feb;   /* main nav bar color */
+  background-color: #1f6feb;
   padding: 10px 14px;
   border-radius: 10px;
+  white-space: nowrap;
 }
 
-/* Normal nav links */
-.nav-link {
-  color: #ffffff;              /* WHITE text for contrast */
-  text-decoration: none;
-  padding: 6px 12px;
-  border-radius: 6px;
-  font-weight: 500;
-}
-
-/* Hover effect (optional but nice) */
-.nav-link:hover {
-  background-color: rgba(255, 255, 255, 0.15);
-}
-
-/* Active page tab */
-.nav-link.active {
-  background-color: #ffffff;   /* WHITE box */
-  color: #1f6feb;               /* BLUE text */
-  font-weight: 700;
-}
-
-/* Force nav links to override global <a> styles */
+/* nav links */
 .nav a,
 .nav a:visited {
   color: #ffffff;
+  text-decoration: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 600;
 }
 
+/* hover */
+.nav a:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* active tab */
 .nav a.active {
   background-color: #ffffff;
   color: #1f6feb;
   font-weight: 700;
 }
 
-/* Remove bullets and indent from contact list */
+/* Small screens: allow wrapping if needed */
+@media (max-width: 640px) {
+  .nav {
+    white-space: normal;
+    text-align: center;
+  }
+}
+
+/* ========= Home layout (if you’re using it) ========= */
+.home-container {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+}
+
+.home-text { flex: 2; }
+.home-image { flex: 1; }
+
+.home-image img {
+  max-width: 100%;
+  border-radius: 8px;
+}
+
+/* Contact list */
 .contact-list {
   list-style: none;
   padding-left: 0;
-}
-
-/* Position navigation bar at top-right */
-.nav {
-  position: absolute;
-  top: 20px;
-  right: 20px;
 }

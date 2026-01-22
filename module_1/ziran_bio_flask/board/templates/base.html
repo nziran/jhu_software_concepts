@@ -1,19 +1,26 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <title>Navid Ziran — Personal Developer Site | {% block title %}{% endblock title %}</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{% block title %}{% endblock title %}</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
 </head>
+
 <body>
-<h1>Navid Ziran — Personal Developer Site</h1>
-{% include("_navigation.html") %}
-<section>
-  <header>
-    {% block header %}{% endblock header %}
+  <!-- Navigation only (top-right) -->
+  <header class="nav-header">
+    {% include "_navigation.html" %}
   </header>
-  <main>
-    {% block content %}{% endblock content %}
-  </main>
-</section>
+
+  <section>
+    <header>
+      {% block header %}{% endblock header %}
+    </header>
+
+    <main>
+      {% block content %}{% endblock content %}
+    </main>
+  </section>
 </body>
 </html>
