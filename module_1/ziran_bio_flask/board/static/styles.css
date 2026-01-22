@@ -78,7 +78,10 @@ main a:hover {
   align-items: flex-start;
 }
 
-.home-text { flex: 2; }
+.home-text {
+  flex: 2;
+  text-align: left;
+}
 .home-image { flex: 1; }
 
 .home-image img {
