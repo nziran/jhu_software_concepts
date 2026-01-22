@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Home{% endblock title %}
+
+{% block header %}
+  <h2>Home</h2>
+{% endblock header %}
+
+{% block content %}
+<div class="home-container">
+  <div class="home-text">
+   
+    <h3>Orthopaedic Trauma Surgeon & Innovator</h3>
+
+    <p>
+      I am a practicing board-certified orthopaedic trauma surgeon with a focus on polytrauma, pelvic/acetabular trauma,
+      and medical device innovation. I am currently expanding my
+      technical skill set in software development and artificial intelligence,
+      with an emphasis on building practical, AI-based solutions that can be utilized in the operating room.
+    </p>
+  </div>
+
+  <div class="home-image">
+    <img src="{{ url_for('static', filename='profile.jpg') }}" alt="Profile picture">
+  </div>
+</div>
+{% endblock content %}

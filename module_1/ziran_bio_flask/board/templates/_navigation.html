@@ -1,0 +1,10 @@
+<nav class="nav">
+  <a class="nav-link {{ 'active' if active=='home' else '' }}"
+     href="{{ url_for('pages.home') }}">Home</a>
+
+  <a class="nav-link {{ 'active' if active=='contact' else '' }}"
+     href="{{ url_for('pages.contact') }}">Contact</a>
+
+  <a class="nav-link {{ 'active' if active=='projects' else '' }}"
+     href="{{ url_for('pages.projects') }}">Projects</a>
+</nav>

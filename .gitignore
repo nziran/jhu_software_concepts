@@ -1,1 +1,11 @@
+# macOS junk
 .DS_Store
+
+# Python bytecode
+__pycache__/
+*.pyc
+
+# Virtual environments
+venv/
+.venv/
+.env/
