@@ -9,3 +9,10 @@ __pycache__/
 venv/
 .venv/
 .env/
+
+# Course files / zips (don't track)
+Lectures/
+*.zip
+
+# Module 2 debug HTML (optional)
+module_2/page1.html
