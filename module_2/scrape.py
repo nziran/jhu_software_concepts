@@ -217,6 +217,6 @@ def load_data(path: str = OUTPUT_JSON) -> list[dict]:
 
 if __name__ == "__main__":
     # Phase 1 test: scrape 1 page
-    records = scrape_data(pages=1500)
+    records = scrape_data(pages=1550)
     save_data(records, OUTPUT_JSON)
     print(f"Saved {len(records)} records to {OUTPUT_JSON}")
