@@ -9,12 +9,14 @@ Approach
 
 This assignment is implemented as a 4-step pipeline:
 
+⸻
+
 Step 1 — scrape_data(): Scrape GradCafe survey pages
 
 File: scrape.py
 Output: applicant_data.json (RAW / uncleaned)
 	•	The script scrapes GradCafe survey pages:
-        https://www.thegradcafe.com/survey/?page=N
+		https://www.thegradcafe.com/survey/?page=N
 	•	Each page contains ~20 applicant rows.
 	•	From the survey table, the scraper collects:
 	•	Program Name
@@ -35,28 +37,29 @@ Tools used:
 
 ⸻
 
-Step 2 — Result-page detail scraping "(/result/)" with parallel processing
+Step 2 — Detail scraping phase (executed inside scrape.py) with parallel processing
 
 File: scrape.py
 Output fields added into applicant_data.json
 	•	Each row includes a detail page URL like:
-        https://www.thegradcafe.com/result/<id>
+		https://www.thegradcafe.com/result/<id>
 	•	The scraper fetches these detail pages to extract additional fields required by the rubric, including:
-	•	International / American student (from “Degree’s Country of Origin”)
-	•	GRE score (if available)
-	•	GRE Verbal score (if available)
-	•	GRE Analytical Writing score (if available)
-	•	GPA (if available)
-	•	Degree Type (if available)
-	•	Masters or PhD bucket (degree_level)
+
+		•	International status (derived from “Degree’s Country of Origin”)
+		•	GRE score (if available)
+		•	GRE Verbal score (if available)
+		•	GRE Analytical Writing score (if available)
+		•	GPA (if available)
+		•	Degree Type (if available)
+		•	Masters or PhD bucket (degree_level)
 
 Parallel processing:
 	•	The scraper uses ThreadPoolExecutor to fetch result pages concurrently.
 	•	This speeds up scraping because result-page requests are network-bound and benefit from parallel fetching.
 
 Safety/accuracy logic:
-	•	Numeric fields (GPA/GRE) are extracted using regex to avoid “label-as-value” errors 
-        (ex: “GRE General:” incorrectly stored as a value).
+	•	Numeric fields (GPA/GRE) are extracted using regex to avoid “label-as-value” errors
+		(ex: “GRE General:” incorrectly stored as a value).
 	•	is_international is only set when the origin field is present.
 
 ⸻
@@ -71,10 +74,13 @@ Cleaning steps:
 	•	Remove any remaining HTML tags (defensive)
 	•	Normalize whitespace
 	•	Convert empty strings to None
-	•	Ensure is_international is only True / False / None
+	•	Standardize international status into a categorical value:
+		•	If is_international == True → International
+		•	If is_international == False → American
+		•	If missing/unknown → None
 	•	Ensure all required keys exist in every record
 	•	Create a combined “program” field used for the LLM step:
-        program = “<program_name_raw>, <university_raw>”
+		program = "<program_name_raw>, <university_raw>"
 
 ⸻
 
@@ -84,7 +90,8 @@ Folder: llm_hosting
 Command used:
 python app.py --file ../cleaned_applicant_data.json > out.json
 
-This produces an output file containing additional LLM-generated labels.
+This produces an output file containing additional LLM-generated labels. 
+Note: The output file was renamed from out.json to the required submission filename: llm_extend_applicant_data.json (located in module_2)
 
 ⸻
 
