@@ -3,6 +3,8 @@ JHED ID: nziran1
 Module Info: Module 2 — GradCafe Web Scraper + Data Cleaner + LLM Labeling
 Due Date: Sunday, 2/01/2026
 
+SSH Repo URL: git@github.com:nziran/jhu_software_concepts.git
+
 ⸻
 
 Approach
