@@ -1,8 +1,9 @@
-# scrape2.py
+# scrape.py
 import json
 import os
 import re
 import time
+import socket
 from datetime import datetime, timezone
 from urllib.request import Request, urlopen
 from urllib.error import HTTPError, URLError
@@ -17,6 +18,9 @@ from bs4 import BeautifulSoup
 BASE_URL = "https://www.thegradcafe.com/survey/"
 OUTPUT_JSON = "applicant_data.json"
 
+# IMPORTANT: used by save/load defaults below
+CHECKPOINT_PATH = OUTPUT_JSON
+
 USER_AGENT = "Mozilla/5.0"
 TIMEOUT_S = 30
 
@@ -30,9 +34,8 @@ MAX_WORKERS = 8          # 6–10 is usually safe; higher may get throttled
 RETRIES = 3
 BACKOFF_S = 1.5
 
-# Chunking / checkpointing (THIS is the key improvement)
+# Chunking / checkpointing
 CHUNK_SURVEY_PAGES = 25                  # scrape this many survey pages, then parallel-fetch their details
-CHECKPOINT_PATH = OUTPUT_JSON            # save progress here every chunk
 DETAIL_FUTURE_TIMEOUT_S = 60             # per-result-page future timeout (avoid hanging forever)
 
 # -----------------------------
@@ -48,7 +51,7 @@ def _safe_fetch_html(url: str) -> str | None:
     for attempt in range(1, RETRIES + 1):
         try:
             return _fetch_html(url)
-        except (HTTPError, URLError, TimeoutError) as e:
+        except (HTTPError, URLError, socket.timeout, TimeoutError) as e:
             print(f"[fetch fail {attempt}/{RETRIES}] {url} :: {e}")
             time.sleep(BACKOFF_S * attempt)
     return None
@@ -62,6 +65,7 @@ LABEL_GARBAGE = {
     "Undergrad GPA", "Degree Type", "Degree's Country of Origin",
     "Timeline", "Admissions", "Results", "Logo"
 }
+
 
 def _normalize_none(s: str | None) -> str | None:
     if s is None:
@@ -132,9 +136,7 @@ def _zero_to_none(s: str | None) -> str | None:
 
 
 def _degree_level(degree_type: str | None) -> str | None:
-    """
-    Rubric wants Masters vs PhD. Map common doctoral degrees into "PhD".
-    """
+    """Rubric wants Masters vs PhD. Map common doctoral degrees into 'PhD'."""
     if not degree_type:
         return None
     t = degree_type.strip().lower()
@@ -224,7 +226,6 @@ def _parse_survey_page(html: str, source_url: str) -> list[dict]:
         entry_url = _extract_entry_url(row, source_url)
 
         record = {
-            # required buckets
             "program_name_raw": program,
             "university_raw": university,
             "comments": comments_text,
@@ -289,6 +290,7 @@ def _parse_result_page(entry_url: str) -> dict:
     if notes and notes.strip() in LABEL_GARBAGE:
         notes = None
 
+    # These labels are often absent on GradCafe; keep None if missing
     start_term = _normalize_none(get_after("Term"))
     start_year = _normalize_none(get_after("Year"))
 
@@ -395,11 +397,9 @@ def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple
 # -----------------------------
 # Main scrape pipeline (CHUNKED)
 # -----------------------------
-def main(resume: bool = True) -> None:
-    # Load existing if resume is enabled
+def scrape_data(resume: bool = True) -> None:
     records: list[dict] = []
     seen_urls: set[str] = set()
-    scraped_pages_done = 0  # best-effort only
 
     if resume and os.path.exists(CHECKPOINT_PATH):
         try:
@@ -413,7 +413,6 @@ def main(resume: bool = True) -> None:
             records = []
             seen_urls = set()
 
-    # We always loop pages 1..SURVEY_PAGES; de-dupe keeps it safe.
     chunk_new_indices: list[int] = []
     total_failed_details = 0
 
@@ -425,10 +424,6 @@ def main(resume: bool = True) -> None:
         if not html:
             print("  -> skipped (fetch failed)")
             continue
-
-        if page == 1:
-            with open("page1.html", "w", encoding="utf-8") as f:
-                f.write(html)
 
         page_records = _parse_survey_page(html, url)
 
@@ -445,7 +440,6 @@ def main(resume: bool = True) -> None:
 
         print(f"  parsed={len(page_records)} added={added} total={len(records)} chunk_pending={len(chunk_new_indices)}")
 
-        # If we've completed a survey chunk, fetch details for that chunk in parallel
         if FETCH_DETAILS and (page % CHUNK_SURVEY_PAGES == 0) and chunk_new_indices:
             print(f"[details] fetching details for last {len(chunk_new_indices)} new rows (workers={MAX_WORKERS}) ...")
             updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
@@ -456,21 +450,18 @@ def main(resume: bool = True) -> None:
             save_data(records, CHECKPOINT_PATH)
             print(f"[checkpoint] saved {len(records)} rows -> {CHECKPOINT_PATH}")
 
-        # Periodic checkpoint even if details off
         if page % CHUNK_SURVEY_PAGES == 0 and not FETCH_DETAILS:
             save_data(records, CHECKPOINT_PATH)
             print(f"[checkpoint] saved {len(records)} rows -> {CHECKPOINT_PATH}")
 
         time.sleep(DELAY_BETWEEN_SURVEY_PAGES_S)
 
-    # Final: if any remaining new records not yet detail-fetched, do them now
     if FETCH_DETAILS and chunk_new_indices:
         print(f"[details] final fetch for remaining {len(chunk_new_indices)} rows ...")
         updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
         total_failed_details += failed
         print(f"[details] final done: updated={updated}, failed={failed}, total_failed_details={total_failed_details}")
 
-    # Defensive: ensure all expected keys exist
     required_keys = [
         "program_name_raw", "university_raw", "comments", "date_posted", "entry_url",
         "applicant_status", "accepted_date", "rejected_date",
@@ -490,4 +481,4 @@ def main(resume: bool = True) -> None:
 if __name__ == "__main__":
     # If you deleted applicant_data.json and want a clean run, set resume=False.
     # Otherwise, resume=True is safe (de-dupes by entry_url).
-    main(resume=True)
+    scrape_data(resume=True)
