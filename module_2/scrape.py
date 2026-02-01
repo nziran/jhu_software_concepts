@@ -75,12 +75,22 @@ def _normalize_none(s: str | None) -> str | None:
 
 
 def _canonical_result_url(url: str | None) -> str | None:
-    """Ensure canonical https://www.thegradcafe.com/result/<id> (no fragments/query)."""
+    """
+    Ensure canonical https://www.thegradcafe.com/result/<id>
+    (force https + force www + drop query/fragment)
+    """
     if not url:
         return None
     try:
         p = urlparse(url)
         clean = p._replace(fragment="", query="")
+
+        scheme = "https"
+        netloc = clean.netloc or "www.thegradcafe.com"
+        if netloc == "thegradcafe.com":
+            netloc = "www.thegradcafe.com"
+
+        clean = clean._replace(scheme=scheme, netloc=netloc)
         return clean.geturl()
     except Exception:
         return url
@@ -238,7 +248,10 @@ def _parse_survey_page(html: str, source_url: str) -> list[dict]:
             # detail fields (filled later)
             "start_term": None,
             "start_year": None,
+
+            # IMPORTANT: keep this RAW as True/False/None for clean.py to convert
             "is_international": None,
+
             "gre_total": None,
             "gre_v": None,
             "gre_aw": None,
@@ -258,12 +271,16 @@ def _parse_survey_page(html: str, source_url: str) -> list[dict]:
 # Detail page parsing (/result/<id>)
 # -----------------------------
 def _parse_result_page(entry_url: str) -> dict:
+    """
+    Returns ONLY fields we want to merge into the raw record.
+    NOTE: We DO NOT include 'origin' in output.
+    We compute boolean is_international from origin internally, then discard origin.
+    """
     html = _safe_fetch_html(entry_url)
     if not html:
         return {
             "degree": None,
             "degree_level": None,
-            "origin": None,
             "is_international": None,
             "gpa": None,
             "gre_total": None,
@@ -304,14 +321,15 @@ def _parse_result_page(entry_url: str) -> dict:
     gre_v = _extract_int(gre_v_raw)
     gre_aw = _extract_float(gre_aw_raw)
 
+    # Compute boolean only; do not keep origin in dataset
     is_international = None
     if origin:
+        # keep it strict: only "American" maps to False, everything else -> True
         is_international = (origin.strip().lower() != "american")
 
     return {
         "degree": degree,
         "degree_level": _degree_level(degree),
-        "origin": origin,
         "is_international": is_international,
         "gpa": gpa,
         "gre_total": gre_total,
@@ -375,15 +393,12 @@ def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple
             if extra.get("detail_comments"):
                 r["comments"] = extra["detail_comments"]
 
-            # overwrite detail fields
+            # overwrite detail fields (raw storage)
             for k in ["degree", "degree_level", "gpa", "gre_total", "gre_v", "gre_aw", "start_term", "start_year"]:
                 r[k] = extra.get(k)
 
-            # only set is_international if origin existed, else keep None
-            if extra.get("origin") is not None:
-                r["is_international"] = extra.get("is_international")
-            else:
-                r["is_international"] = None
+            # IMPORTANT: always set raw boolean; no origin gating
+            r["is_international"] = extra.get("is_international")
 
             # final safety
             for k in ["gpa", "gre_total", "gre_v", "gre_aw"]:
@@ -401,11 +416,13 @@ def scrape_data(resume: bool = True) -> None:
     records: list[dict] = []
     seen_urls: set[str] = set()
 
+    # Resume: load existing and build de-dupe set (canonicalized)
     if resume and os.path.exists(CHECKPOINT_PATH):
         try:
             records = load_data(CHECKPOINT_PATH)
             for r in records:
-                u = r.get("entry_url")
+                u = _canonical_result_url(r.get("entry_url"))
+                r["entry_url"] = u  # keep file consistent too
                 if u:
                     seen_urls.add(u)
             print(f"[resume] loaded {len(records)} existing rows from {CHECKPOINT_PATH}")
@@ -416,52 +433,70 @@ def scrape_data(resume: bool = True) -> None:
     chunk_new_indices: list[int] = []
     total_failed_details = 0
 
-    for page in range(1, SURVEY_PAGES + 1):
-        url = f"{BASE_URL}?page={page}"
-        print(f"[survey] page {page}/{SURVEY_PAGES}: {url}")
+    try:
+        for page in range(1, SURVEY_PAGES + 1):
+            url = f"{BASE_URL}?page={page}"
+            print(f"[survey] page {page}/{SURVEY_PAGES}: {url}")
 
-        html = _safe_fetch_html(url)
-        if not html:
-            print("  -> skipped (fetch failed)")
-            continue
-
-        page_records = _parse_survey_page(html, url)
-
-        added = 0
-        for rec in page_records:
-            u = rec.get("entry_url")
-            if u and u in seen_urls:
+            html = _safe_fetch_html(url)
+            if not html:
+                print("  -> skipped (fetch failed)")
                 continue
-            if u:
-                seen_urls.add(u)
-            records.append(rec)
-            chunk_new_indices.append(len(records) - 1)
-            added += 1
 
-        print(f"  parsed={len(page_records)} added={added} total={len(records)} chunk_pending={len(chunk_new_indices)}")
+            page_records = _parse_survey_page(html, url)
 
-        if FETCH_DETAILS and (page % CHUNK_SURVEY_PAGES == 0) and chunk_new_indices:
-            print(f"[details] fetching details for last {len(chunk_new_indices)} new rows (workers={MAX_WORKERS}) ...")
-            updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
-            total_failed_details += failed
-            print(f"[details] chunk done: updated={updated}, failed={failed}, total_failed_details={total_failed_details}")
-            chunk_new_indices = []
+            added = 0
+            for rec in page_records:
+                u = _canonical_result_url(rec.get("entry_url"))
+                rec["entry_url"] = u  # keep file consistent too
 
-            save_data(records, CHECKPOINT_PATH)
-            print(f"[checkpoint] saved {len(records)} rows -> {CHECKPOINT_PATH}")
+                if u and u in seen_urls:
+                    continue
+                if u:
+                    seen_urls.add(u)
 
-        if page % CHUNK_SURVEY_PAGES == 0 and not FETCH_DETAILS:
-            save_data(records, CHECKPOINT_PATH)
-            print(f"[checkpoint] saved {len(records)} rows -> {CHECKPOINT_PATH}")
+                records.append(rec)
+                chunk_new_indices.append(len(records) - 1)
+                added += 1
 
-        time.sleep(DELAY_BETWEEN_SURVEY_PAGES_S)
+            print(
+                f"  parsed={len(page_records)} added={added} total={len(records)} "
+                f"chunk_pending={len(chunk_new_indices)}"
+            )
 
+            # If we've completed a survey chunk, fetch details for that chunk in parallel
+            if FETCH_DETAILS and (page % CHUNK_SURVEY_PAGES == 0) and chunk_new_indices:
+                print(f"[details] fetching details for last {len(chunk_new_indices)} new rows (workers={MAX_WORKERS}) ...")
+                updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
+                total_failed_details += failed
+                print(f"[details] chunk done: updated={updated}, failed={failed}, total_failed_details={total_failed_details}")
+                chunk_new_indices = []
+
+                save_data(records, CHECKPOINT_PATH)
+                print(f"[checkpoint] saved {len(records)} rows -> {CHECKPOINT_PATH}")
+
+            # Periodic checkpoint even if details off
+            if page % CHUNK_SURVEY_PAGES == 0 and not FETCH_DETAILS:
+                save_data(records, CHECKPOINT_PATH)
+                print(f"[checkpoint] saved {len(records)} rows -> {CHECKPOINT_PATH}")
+
+            time.sleep(DELAY_BETWEEN_SURVEY_PAGES_S)
+
+    except KeyboardInterrupt:
+        # Graceful exit: save what we have so far
+        print("\n[interrupt] Ctrl-C received. Saving checkpoint...")
+        save_data(records, CHECKPOINT_PATH)
+        print(f"[interrupt] saved {len(records)} rows -> {CHECKPOINT_PATH}")
+        # still attempt details for pending chunk? NO—keep it simple/fast on interrupt.
+
+    # Final: if any remaining new records not yet detail-fetched, do them now
     if FETCH_DETAILS and chunk_new_indices:
         print(f"[details] final fetch for remaining {len(chunk_new_indices)} rows ...")
         updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
         total_failed_details += failed
         print(f"[details] final done: updated={updated}, failed={failed}, total_failed_details={total_failed_details}")
 
+    # Defensive: ensure all expected keys exist
     required_keys = [
         "program_name_raw", "university_raw", "comments", "date_posted", "entry_url",
         "applicant_status", "accepted_date", "rejected_date",

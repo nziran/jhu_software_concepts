@@ -58,6 +58,15 @@ ABBREV_UNI: Dict[str, str] = {
 COMMON_UNI_FIXES: Dict[str, str] = {
     "McGiill University": "McGill University",
     "Mcgill University": "McGill University",
+
+
+    "Carnegie Melon University": "Carnegie Mellon University",
+    "University of Pennsylvania Whartoon": "University of Pennsylvania Wharton",
+
+    # optional: normalize UIC formatting
+    "University of Illinois Chicago (Uic)": "University of Illinois Chicago (UIC)",
+    "University of Illinois Chicago(UIC)": "University of Illinois Chicago (UIC)",
+    
     # Normalize 'Of' → 'of'
     "University Of British Columbia": "University of British Columbia",
 }
@@ -211,15 +220,9 @@ def _call_llm(program_text: str) -> Dict[str, str]:
 
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     for x_in, x_out in FEW_SHOTS:
-        messages.append(
-            {"role": "user", "content": json.dumps(x_in, ensure_ascii=False)}
-        )
-        messages.append(
-            {
-                "role": "assistant",
-                "content": json.dumps(x_out, ensure_ascii=False),
-            }
-        )
+        messages.append({"role": "user", "content": json.dumps(x_in, ensure_ascii=False)})
+        messages.append({"role": "assistant", "content": json.dumps(x_out, ensure_ascii=False)})
+
     messages.append(
         {
             "role": "user",
@@ -245,10 +248,7 @@ def _call_llm(program_text: str) -> Dict[str, str]:
 
     std_prog = _post_normalize_program(std_prog)
     std_uni = _post_normalize_university(std_uni)
-    return {
-        "standardized_program": std_prog,
-        "standardized_university": std_uni,
-    }
+    return {"standardized_program": std_prog, "standardized_university": std_uni}
 
 
 def _normalize_input(payload: Any) -> List[Dict[str, Any]]:
@@ -258,6 +258,17 @@ def _normalize_input(payload: Any) -> List[Dict[str, Any]]:
     if isinstance(payload, dict) and isinstance(payload.get("rows"), list):
         return payload["rows"]
     return []
+
+
+def _build_program_text(row: Dict[str, Any]) -> str:
+    """
+    Option A fix:
+    Feed the LLM a single string that includes BOTH fields.
+    This matches the prompt/few-shots expectation that `program` may contain both.
+    """
+    prog = (row or {}).get("program") or ""
+    uni = (row or {}).get("university") or ""
+    return f"{prog}, {uni}".strip().strip(",")
 
 
 @app.get("/")
@@ -272,15 +283,15 @@ def standardize() -> Any:
     payload = request.get_json(force=True, silent=True)
     rows = _normalize_input(payload)
 
-    out: List[Dict[str, Any]] = []
+    out_rows: List[Dict[str, Any]] = []
     for row in rows:
-        program_text = (row or {}).get("program") or ""
+        program_text = _build_program_text(row)
         result = _call_llm(program_text)
         row["llm-generated-program"] = result["standardized_program"]
         row["llm-generated-university"] = result["standardized_university"]
-        out.append(row)
+        out_rows.append(row)
 
-    return jsonify({"rows": out})
+    return jsonify({"rows": out_rows})
 
 
 def _cli_process_file(
@@ -303,7 +314,7 @@ def _cli_process_file(
 
     try:
         for row in rows:
-            program_text = (row or {}).get("program") or ""
+            program_text = _build_program_text(row)
             result = _call_llm(program_text)
             row["llm-generated-program"] = result["standardized_program"]
             row["llm-generated-university"] = result["standardized_university"]
@@ -335,8 +346,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--out",
         default=None,
-        help="Output path for JSON Lines (ndjson). "
-        "Defaults to <input>.jsonl when --file is set.",
+        help="Output path for JSON Lines (ndjson). Defaults to <input>.jsonl when --file is set.",
     )
     parser.add_argument(
         "--append",

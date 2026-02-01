@@ -1,3 +1,9 @@
 llm_hosting/models/*.gguf
 llm_hosting/out.json
 models/
+models/
+*.gguf
+.venv/
+__pycache__/
+*.pyc
+.DS_Store
