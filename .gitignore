@@ -16,3 +16,6 @@ Lectures/
 
 # Module 2 debug HTML (optional)
 module_2/page1.html
+# Local models / large files
+models/
+*.gguf
