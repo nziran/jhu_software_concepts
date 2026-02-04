@@ -1,5 +1,17 @@
+"""
+query_data.py
+
+Runs a set of SQL queries against the `applicants` table in the `gradcafe` Postgres DB,
+and returns results formatted as “analysis cards” (id/question/answer dicts) for your
+Analysis web page (and also supports printing them from CLI).
+"""
+
 import psycopg
 
+# ----------------------------
+# Database connection settings
+# ----------------------------
+# These constants define where and how to connect to Postgres.
 DB_NAME = "gradcafe"
 DB_USER = "ziran"
 DB_HOST = "localhost"
@@ -8,19 +20,33 @@ DB_PORT = 5432
 
 def get_analysis_cards():
     """
-    Returns a list of dicts:
-    [{"id": "Q1", "question": "...", "answer": "..."} , ...]
+    Runs a curated set of analysis queries and returns them as a list of dicts:
+
+        [
+          {"id": "Q1", "question": "...", "answer": "..."},
+          {"id": "Q2", "question": "...", "answer": "..."},
+          ...
+        ]
+
+    The caller (e.g., your Flask route) can render each card in the UI.
     """
     cards = []
 
+    # Open a database connection (auto-closes at end of `with` block).
     with psycopg.connect(
         dbname=DB_NAME,
         user=DB_USER,
         host=DB_HOST,
         port=DB_PORT,
     ) as conn:
+        # Cursor is used to execute SQL statements and fetch results.
         with conn.cursor() as cur:
-            # Q1
+
+            # ----------------------------
+            # Q1: Count Fall 2026 entries
+            # ----------------------------
+            # Uses ILIKE for case-insensitive matching.
+            # term is stored as a string (e.g., "Fall 2026"), so this searches by substring.
             cur.execute(
                 """
                 SELECT COUNT(*)
@@ -37,7 +63,12 @@ def get_analysis_cards():
                 }
             )
 
-            # Q2
+            # ----------------------------
+            # Q2: Percent international (excluding American/Other)
+            # ----------------------------
+            # 1) Get total rows
+            # 2) Count rows that look like "international" but are NOT "american" or "other"
+            # 3) Compute percent (guard against divide-by-zero)
             cur.execute("SELECT COUNT(*) FROM applicants;")
             total = cur.fetchone()[0]
 
@@ -51,6 +82,7 @@ def get_analysis_cards():
                 """
             )
             intl = cur.fetchone()[0]
+
             pct_intl = (intl / total) * 100 if total else 0.0
             cards.append(
                 {
@@ -60,7 +92,14 @@ def get_analysis_cards():
                 }
             )
 
-            # Q3 (filtered to plausible ranges due to mixed GRE encoding in source data)
+            # ----------------------------
+            # Q3: Averages for GPA and GRE metrics
+            # ----------------------------
+            # Computes AVG across the whole table, but filters GRE/GRE_V/GRE_AW to plausible ranges.
+            # Rationale: source data may have missing/garbled GRE values; the WHERE clause excludes
+            # obviously invalid numbers while allowing NULLs.
+            #
+            # Note: AVG() ignores NULLs, so these averages are computed only on rows where each metric exists.
             cur.execute(
                 """
                 SELECT
@@ -88,7 +127,10 @@ def get_analysis_cards():
                 }
             )
 
-            # Q4
+            # ----------------------------
+            # Q4: Average GPA of American Fall 2026 applicants
+            # ----------------------------
+            # Restricts to Fall 2026 + "american" in us_or_international and requires GPA present.
             cur.execute(
                 """
                 SELECT AVG(gpa)
@@ -107,7 +149,12 @@ def get_analysis_cards():
                 }
             )
 
-            # Q5
+            # ----------------------------
+            # Q5: Acceptance % among Fall 2026 entries
+            # ----------------------------
+            # 1) Count total Fall 2026 entries
+            # 2) Count Fall 2026 entries whose status suggests acceptance
+            # 3) Compute acceptance percentage (guard against divide-by-zero)
             cur.execute(
                 """
                 SELECT COUNT(*)
@@ -136,7 +183,10 @@ def get_analysis_cards():
                 }
             )
 
-            # Q6
+            # ----------------------------
+            # Q6: Average GPA for Fall 2026 acceptances
+            # ----------------------------
+            # Like Q4, but filters to accepted applicants and requires GPA present.
             cur.execute(
                 """
                 SELECT AVG(gpa)
@@ -155,7 +205,12 @@ def get_analysis_cards():
                 }
             )
 
-            # Q7
+            # ----------------------------
+            # Q7: JHU Masters in Computer Science count
+            # ----------------------------
+            # Counts entries for Johns Hopkins where degree looks like "master"
+            # and program is identified as Computer Science either by scraped field
+            # OR by llm_generated_program (useful when program naming is messy).
             cur.execute(
                 """
                 SELECT COUNT(*)
@@ -177,7 +232,15 @@ def get_analysis_cards():
                 }
             )
 
-            # Q8
+            # ----------------------------
+            # Q8: 2026 PhD CS acceptances at selected universities (downloaded fields)
+            # ----------------------------
+            # Filters:
+            # - term contains 2026
+            # - status indicates acceptance
+            # - degree indicates PhD
+            # - program is CS (scraped OR LLM program)
+            # - university matches one of: Georgetown, MIT, Stanford, Carnegie Mellon
             cur.execute(
                 """
                 SELECT COUNT(*)
@@ -207,7 +270,11 @@ def get_analysis_cards():
                 }
             )
 
-            # Q9 (LLM fields)
+            # ----------------------------
+            # Q9: Same idea as Q8 but using ONLY LLM-generated fields
+            # ----------------------------
+            # This intentionally tests whether normalization via LLM changes counts.
+            # (Sometimes scraped fields are inconsistent; LLM fields may consolidate variants.)
             cur.execute(
                 """
                 SELECT COUNT(*)
@@ -233,7 +300,11 @@ def get_analysis_cards():
                 }
             )
 
-            # Q10 (custom 1): Top 5 programs
+            # ----------------------------
+            # Q10 (custom 1): Top 5 most popular programs
+            # ----------------------------
+            # Groups by the raw `program` field and returns the 5 programs with the most entries.
+            # Excludes NULL/empty strings.
             cur.execute(
                 """
                 SELECT program, COUNT(*) AS count
@@ -245,6 +316,9 @@ def get_analysis_cards():
                 """
             )
             top5_programs = cur.fetchall()
+
+            # Convert result rows into a multi-line string for easy display in UI.
+            # Format is: "<count> - <program>"
             top5_programs_str = "\n".join([f"{c} - {p}" for (p, c) in top5_programs])
             cards.append(
                 {
@@ -254,7 +328,11 @@ def get_analysis_cards():
                 }
             )
 
+            # ----------------------------
             # Q11 (custom 2): Top 5 universities for Physics PhD
+            # ----------------------------
+            # Filters rows where program exactly equals 'Physics PhD', then groups by university.
+            # Note: this relies on consistent program naming in your dataset.
             cur.execute(
                 """
                 SELECT university, COUNT(*) AS count
@@ -267,6 +345,8 @@ def get_analysis_cards():
                 """
             )
             top5_physics_unis = cur.fetchall()
+
+            # Convert rows into "<count> - <university>" lines.
             top5_physics_unis_str = "\n".join([f"{c} - {u}" for (u, c) in top5_physics_unis])
             cards.append(
                 {
@@ -276,14 +356,22 @@ def get_analysis_cards():
                 }
             )
 
+    # Return the complete list of analysis cards to the caller.
     return cards
 
 
 def main():
+    """
+    Simple CLI runner:
+      - calls get_analysis_cards()
+      - prints each card in a readable format
+    Useful for quick local testing outside the web app.
+    """
     cards = get_analysis_cards()
     for c in cards:
         print(f"{c['id']}) {c['question']}\n    Answer: {c['answer']}\n")
 
 
+# Standard entrypoint guard so the file can be imported without executing main().
 if __name__ == "__main__":
     main()
