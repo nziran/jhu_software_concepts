@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GradCafe Analysis</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+  </head>
+
+  <body>
+    <div class="container">
+      <header class="header">
+        <h1>GradCafe Data Analysis</h1>
+        <p>PostgreSQL + Flask dynamic query results</p>
+      </header>
+
+      <main class="grid">
+        {% for card in cards %}
+        <div class="card">
+          <div class="card-id">{{ card.id }}</div>
+          <div class="card-question">{{ card.question }}</div>
+          <div class="card-answer" style="white-space: pre-line;">{{ card.answer }}</div>
+        </div>
+        {% endfor %}
+      </main>
+    </div>
+  </body>
+</html>

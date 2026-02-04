@@ -6,101 +6,158 @@ DB_HOST = "localhost"
 DB_PORT = 5432
 
 
-def main():
+def get_analysis_cards():
+    """
+    Returns a list of dicts:
+    [{"id": "Q1", "question": "...", "answer": "..."} , ...]
+    """
+    cards = []
+
     with psycopg.connect(
-        dbname=DB_NAME, user=DB_USER, host=DB_HOST, port=DB_PORT
+        dbname=DB_NAME,
+        user=DB_USER,
+        host=DB_HOST,
+        port=DB_PORT,
     ) as conn:
         with conn.cursor() as cur:
             # Q1
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT COUNT(*)
                 FROM applicants
                 WHERE term ILIKE '%fall%' AND term ILIKE '%2026%';
-            """)
-            fall_2026 = cur.fetchone()[0]
-            print(f"Q1) Fall 2026 entries: {fall_2026}")
+                """
+            )
+            q1 = cur.fetchone()[0]
+            cards.append(
+                {
+                    "id": "Q1",
+                    "question": "How many entries do you have in your database who have applied for Fall 2026?",
+                    "answer": str(q1),
+                }
+            )
 
             # Q2
             cur.execute("SELECT COUNT(*) FROM applicants;")
             total = cur.fetchone()[0]
 
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT COUNT(*)
                 FROM applicants
                 WHERE us_or_international ILIKE '%international%'
                   AND us_or_international NOT ILIKE '%american%'
                   AND us_or_international NOT ILIKE '%other%';
-            """)
+                """
+            )
             intl = cur.fetchone()[0]
-            pct = (intl / total) * 100 if total else 0
-            print(f"Q2) % international (not American/Other): {pct:.2f}%")
+            pct_intl = (intl / total) * 100 if total else 0.0
+            cards.append(
+                {
+                    "id": "Q2",
+                    "question": "What percentage of entries are from international students (not American or Other) (to two decimal places)?",
+                    "answer": f"{pct_intl:.2f}%",
+                }
+            )
 
-            # Q3: averages computed over non-null values (each AVG ignores NULLs)
-            cur.execute("""
-                 SELECT
-                 AVG(gpa) AS avg_gpa,
-                 AVG(gre) AS avg_gre_total,
-                 AVG(gre_v) AS avg_gre_section,
-                 AVG(gre_aw) AS avg_aw
+            # Q3 (filtered to plausible ranges due to mixed GRE encoding in source data)
+            cur.execute(
+                """
+                SELECT
+                  AVG(gpa) AS avg_gpa,
+                  AVG(gre) AS avg_gre_total,
+                  AVG(gre_v) AS avg_gre_section,
+                  AVG(gre_aw) AS avg_aw
                 FROM applicants
                 WHERE (gre BETWEEN 300 AND 340 OR gre IS NULL)
-                AND (gre_v BETWEEN 130 AND 170 OR gre_v IS NULL)
-                AND (gre_aw BETWEEN 0 AND 6 OR gre_aw IS NULL);
-                """)
-
-            avg_gpa, avg_gre, avg_gre_v, avg_aw = cur.fetchone()
-
-            print("Q3) Average metrics (filtered to plausible ranges):")
-            print(f"    Avg GPA:        {avg_gpa}")
-            print(f"    Avg GRE Total:  {avg_gre}")
-            print(f"    Avg GRE (Sect): {avg_gre_v}")
-            print(f"    Avg GRE AW:     {avg_aw}")
+                  AND (gre_v BETWEEN 130 AND 170 OR gre_v IS NULL)
+                  AND (gre_aw BETWEEN 0 AND 6 OR gre_aw IS NULL);
+                """
+            )
+            avg_gpa, avg_gre_total, avg_gre_section, avg_aw = cur.fetchone()
+            cards.append(
+                {
+                    "id": "Q3",
+                    "question": "What is the average GPA, GRE (Total), GRE (Section), and GRE AW of applicants who provide these metrics?",
+                    "answer": (
+                        f"Avg GPA: {avg_gpa:.3f}, "
+                        f"Avg GRE Total: {avg_gre_total:.2f}, "
+                        f"Avg GRE (Section): {avg_gre_section:.2f}, "
+                        f"Avg GRE AW: {avg_aw:.2f}"
+                    ),
+                }
+            )
 
             # Q4
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT AVG(gpa)
                 FROM applicants
                 WHERE term ILIKE '%fall%' AND term ILIKE '%2026%'
                   AND us_or_international ILIKE '%american%'
                   AND gpa IS NOT NULL;
-            """)
-            avg_gpa_american_f26 = cur.fetchone()[0]
-            print(
-                f"Q4) Avg GPA of American students (Fall 2026): {avg_gpa_american_f26}"
+                """
+            )
+            q4 = cur.fetchone()[0]
+            cards.append(
+                {
+                    "id": "Q4",
+                    "question": "What is the average GPA of American students in Fall 2026?",
+                    "answer": "N/A" if q4 is None else f"{q4:.2f}",
+                }
             )
 
             # Q5
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT COUNT(*)
                 FROM applicants
                 WHERE term ILIKE '%fall%' AND term ILIKE '%2026%';
-            """)
+                """
+            )
             f26_total = cur.fetchone()[0]
 
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT COUNT(*)
                 FROM applicants
                 WHERE term ILIKE '%fall%' AND term ILIKE '%2026%'
                   AND status ILIKE '%accept%';
-            """)
+                """
+            )
             f26_accept = cur.fetchone()[0]
 
-            pct_accept = (f26_accept / f26_total) * 100 if f26_total else 0
-            print(f"Q5) % Fall 2026 acceptances: {pct_accept:.2f}%")
+            pct_accept = (f26_accept / f26_total) * 100 if f26_total else 0.0
+            cards.append(
+                {
+                    "id": "Q5",
+                    "question": "What percent of entries for Fall 2026 are Acceptances (to two decimal places)?",
+                    "answer": f"{pct_accept:.2f}%",
+                }
+            )
 
             # Q6
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT AVG(gpa)
                 FROM applicants
                 WHERE term ILIKE '%fall%' AND term ILIKE '%2026%'
                   AND status ILIKE '%accept%'
                   AND gpa IS NOT NULL;
-            """)
-            avg_gpa_f26_accept = cur.fetchone()[0]
-            print(f"Q6) Avg GPA of Fall 2026 acceptances: {avg_gpa_f26_accept}")
+                """
+            )
+            q6 = cur.fetchone()[0]
+            cards.append(
+                {
+                    "id": "Q6",
+                    "question": "What is the average GPA of applicants who applied for Fall 2026 who are Acceptances?",
+                    "answer": "N/A" if q6 is None else f"{q6:.2f}",
+                }
+            )
 
             # Q7
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT COUNT(*)
                 FROM applicants
                 WHERE university ILIKE '%johns hopkins%'
@@ -109,12 +166,20 @@ def main():
                         program ILIKE '%computer science%'
                      OR llm_generated_program ILIKE '%computer science%'
                   );
-            """)
+                """
+            )
             q7 = cur.fetchone()[0]
-            print(f"Q7) JHU MS Computer Science entries: {q7}")
+            cards.append(
+                {
+                    "id": "Q7",
+                    "question": "How many entries are from applicants who applied to JHU for a masters degree in Computer Science?",
+                    "answer": str(q7),
+                }
+            )
 
             # Q8
-            cur.execute("""
+            cur.execute(
+                """
                 SELECT COUNT(*)
                 FROM applicants
                 WHERE term ILIKE '%2026%'
@@ -131,12 +196,20 @@ def main():
                      OR university ILIKE '%stanford%'
                      OR university ILIKE '%carnegie mellon%'
                   );
-            """)
+                """
+            )
             q8 = cur.fetchone()[0]
-            print(f"Q8) 2026 PhD CS acceptances (Georgetown/MIT/Stanford/CMU): {q8}")
+            cards.append(
+                {
+                    "id": "Q8",
+                    "question": "How many 2026 acceptances are from applicants who applied to Georgetown, MIT, Stanford, or Carnegie Mellon University for a PhD in Computer Science?",
+                    "answer": str(q8),
+                }
+            )
 
-            # Q9
-            cur.execute("""
+            # Q9 (LLM fields)
+            cur.execute(
+                """
                 SELECT COUNT(*)
                 FROM applicants
                 WHERE term ILIKE '%2026%'
@@ -149,9 +222,67 @@ def main():
                      OR llm_generated_university ILIKE '%stanford%'
                      OR llm_generated_university ILIKE '%carnegie mellon%'
                   );
-            """)
+                """
+            )
             q9 = cur.fetchone()[0]
-            print(f"Q9) Using LLM fields, count becomes: {q9}")
+            cards.append(
+                {
+                    "id": "Q9",
+                    "question": "Do the numbers for Q8 change if you use the LLM generated fields (rather than downloaded fields)?",
+                    "answer": f"Using LLM fields, count = {q9}",
+                }
+            )
+
+            # Q10 (custom 1): Top 5 programs
+            cur.execute(
+                """
+                SELECT program, COUNT(*) AS count
+                FROM applicants
+                WHERE program IS NOT NULL AND program <> ''
+                GROUP BY program
+                ORDER BY count DESC
+                LIMIT 5;
+                """
+            )
+            top5_programs = cur.fetchall()
+            top5_programs_str = "\n".join([f"{c} - {p}" for (p, c) in top5_programs])
+            cards.append(
+                {
+                    "id": "Q10",
+                    "question": "Custom Question: What are the top 5 most popular programs applied to?",
+                    "answer": top5_programs_str,
+                }
+            )
+
+            # Q11 (custom 2): Top 5 universities for Physics PhD
+            cur.execute(
+                """
+                SELECT university, COUNT(*) AS count
+                FROM applicants
+                WHERE program = 'Physics PhD'
+                  AND university IS NOT NULL AND university <> ''
+                GROUP BY university
+                ORDER BY count DESC
+                LIMIT 5;
+                """
+            )
+            top5_physics_unis = cur.fetchall()
+            top5_physics_unis_str = "\n".join([f"{c} - {u}" for (u, c) in top5_physics_unis])
+            cards.append(
+                {
+                    "id": "Q11",
+                    "question": "Custom Question: What are the top 5 universities applied to for Physics PhD?",
+                    "answer": top5_physics_unis_str,
+                }
+            )
+
+    return cards
+
+
+def main():
+    cards = get_analysis_cards()
+    for c in cards:
+        print(f"{c['id']}) {c['question']}\n    Answer: {c['answer']}\n")
 
 
 if __name__ == "__main__":
