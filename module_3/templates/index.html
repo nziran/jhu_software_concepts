@@ -1,28 +1,78 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GradCafe Analysis</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
-  </head>
 
-  <body>
-    <div class="container">
-      <header class="header">
-        <h1>GradCafe Data Analysis</h1>
-        <p>PostgreSQL + Flask dynamic query results</p>
-      </header>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GradCafe Analysis</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
 
-      <main class="grid">
-        {% for card in cards %}
-        <div class="card">
-          <div class="card-id">{{ card.id }}</div>
-          <div class="card-question">{{ card.question }}</div>
-          <div class="card-answer" style="white-space: pre-line;">{{ card.answer }}</div>
-        </div>
-        {% endfor %}
-      </main>
+{% if job_running %}
+<script>
+  // Auto-refresh every 2 seconds while Pull Data is running
+  setTimeout(() => window.location.reload(), 2000);
+</script>
+{% endif %}
+
+<body>
+  <div class="container">
+    <header class="header">
+      <h1>GradCafe Data Analysis</h1>
+      <p>PostgreSQL + Flask dynamic query results</p>
+    </header>
+
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="flash">
+      <div class="flash-msg">{{ messages[-1] }}</div>
     </div>
-  </body>
+    {% endif %}
+    {% endwith %}
+
+    <!-- Control Panel -->
+    <section class="controls">
+
+      <form action="{{ url_for('pull_data') }}" method="post">
+        <button type="submit" {% if job_running %}disabled{% endif %}>
+          Pull Data
+        </button>
+        <p class="control-text">
+          Scrape new GradCafe entries and update the database.
+        </p>
+      </form>
+
+      <form action="{{ url_for('update_analysis') }}" method="post">
+        <button type="submit" {% if job_running %}disabled{% endif %}>
+          Update Analysis
+        </button>
+        <p class="control-text">
+          Refresh analysis with the newest data.
+        </p>
+      </form>
+
+    </section>
+
+    <div class="job-status">
+      {{ job_last_message }}
+    </div>
+
+    {% if last_analysis_at %}
+    <div class="job-status">
+      Last analysis refresh: {{ last_analysis_at }}
+    </div>
+    {% endif %}
+
+    <main class="grid">
+      {% for card in cards %}
+      <div class="card">
+        <div class="card-id">{{ card.id }}</div>
+        <div class="card-question">{{ card.question }}</div>
+        <div class="card-answer" style="white-space: pre-line;">{{ card.answer }}</div>
+      </div>
+      {% endfor %}
+    </main>
+  </div>
+</body>
+
 </html>

@@ -41,7 +41,18 @@ def get_analysis_cards():
     ) as conn:
         # Cursor is used to execute SQL statements and fetch results.
         with conn.cursor() as cur:
-
+            # ----------------------------
+            # Q0: Total rows in database
+            # ----------------------------
+            cur.execute("SELECT COUNT(*) FROM applicants;")
+            total_rows = cur.fetchone()[0]
+            cards.append(
+                {
+                    "id": "Q0",
+                    "question": "How many total GradCafe entries are in your database?",
+                    "answer": str(total_rows),
+                }
+            )
             # ----------------------------
             # Q1: Count Fall 2026 entries
             # ----------------------------
