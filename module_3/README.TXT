@@ -11,6 +11,15 @@ This project builds a complete pipeline that scrapes GradCafe applicant data, cl
 
 The system is divided into Part A (core pipeline + static analysis) and Part B (dynamic update controls).
 
+The initial database is seeded from the scraped and cleaned file llm_extend_applicant_data.json.
+
+This file is loaded via load_data.py to the PostgreSQL database called gradcafe, table applicants.
+
+The Flask dashboard triggers a background pipeline that scrapes, cleans, and loads new GradCafe records using scrape_update.py, clean_update.py, and load_update.py
+
+The data is then analyzed using query_data.py.
+
+
 ⸻
 
 Requirements
@@ -36,22 +45,22 @@ Setup and Run Instructions
 
 	1.	Create and activate a virtual environment:
 
-        python3 -m venv .venv
-        source .venv/bin/activate
+        	python3 -m venv .venv
+        	source .venv/bin/activate
 
 	2.	Install dependencies:
 
-        pip install -r requirements.txt
+        	pip install -r requirements.txt
 
 	3. Ensure PostgreSQL database exists:
 
-        createdb gradcafe
+        	createdb gradcafe
 
-    4. Create the applicants table inside the database:
+    	4. Create the applicants table inside the database:
 
-        psql gradcafe
-
-        Then run the SQL commands that create the applicants table required by this project.
+        	psql gradcafe
+		
+        	Then run the SQL commands that create the applicants table required by this project.
 
 ⸻
 
@@ -62,8 +71,17 @@ PART A — Core Pipeline + Static Analysis Dashboard
 Part A builds the dataset and displays analysis results through Flask.
 
 ⸻
+Step A1 - Initial database seeding
 
-Step A1 — Scrape GradCafe Data
+File: load_data.py
+Input: llm_extend_applicant_data.json 
+Output: PostgreSQL database called gradcafe and a table called applicants
+
+This script loads the Module 2 dataset (llm_extend_applicant_data.json) into the PostgreSQL database gradcafe, table applicants.  This step only needs to be run once to seed the database.
+
+⸻
+
+Step A2 — Scrape GradCafe Data
 
 File: scrape_update.py
 Output: applicant_data_update.json
@@ -84,7 +102,7 @@ python scrape_update.py
 
 ⸻
 
-Step A2 — Clean Raw Data
+Step A3 — Clean Raw Data
 
 File: clean_update.py
 Input: applicant_data_update.json
@@ -107,7 +125,7 @@ python clean_update.py
 
 ⸻
 
-Step A3 — Load Data into PostgreSQL
+Step A4 — Load Data into PostgreSQL
 
 File: load_update.py
 
@@ -125,7 +143,7 @@ python load_update.py
 
 ⸻
 
-Step A4 — Static Flask Analysis Dashboard
+Step A5 — Static Flask Analysis Dashboard
 
 Files:
 
