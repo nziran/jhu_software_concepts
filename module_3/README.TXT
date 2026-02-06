@@ -66,7 +66,8 @@ Setup and Run Instructions
 
         	psql gradcafe
 		
-        	Then run the SQL commands (included in this project) to create the applicants table required by the pipeline.
+        	Then run the SQL commands (included in this project) to create the applicants 
+			table required by the pipeline.
 
 ⸻
 
