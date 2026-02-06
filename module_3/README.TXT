@@ -7,15 +7,21 @@ SSH Repo URL: git@github.com:nziran/jhu_software_concepts.git
 
 ⸻
 
-This project builds a complete pipeline that scrapes GradCafe applicant data, cleans and loads it into PostgreSQL, and displays analytics through a Flask web interface. It also includes dynamic controls that allow users to pull new data and refresh analysis in real time.
+This project builds a complete pipeline that scrapes GradCafe applicant data, 
+cleans and loads it into PostgreSQL, and displays analytics through a Flask web interface. 
+It also includes dynamic controls that allow users to pull new data and refresh analysis in real time.
 
 The system is divided into Part A (core pipeline + static analysis) and Part B (dynamic update controls).
 
-The initial database is seeded from the scraped and cleaned file llm_extend_applicant_data.json.
+The initial database is seeded from the scraped and cleaned file llm_extend_applicant_data.json 
+(originally produced in Module 2 and included here for reproducibility).
+The repository includes the initial dataset required to seed the database,
+making the assignment fully reproducible without external files.
 
 This file is loaded via load_data.py to the PostgreSQL database called gradcafe, table applicants.
 
-The Flask dashboard triggers a background pipeline that scrapes, cleans, and loads new GradCafe records using scrape_update.py, clean_update.py, and load_update.py
+The Flask dashboard triggers a background pipeline that scrapes, cleans, 
+and loads new GradCafe records using scrape_update.py, clean_update.py, and load_update.py
 
 The data is then analyzed using query_data.py.
 
@@ -56,11 +62,11 @@ Setup and Run Instructions
 
         	createdb gradcafe
 
-    	4. Create the applicants table inside the database:
+    4. Create the applicants table inside the database:
 
         	psql gradcafe
 		
-        	Then run the SQL commands that create the applicants table required by this project.
+        	Then run the SQL commands (included in this project) to create the applicants table required by the pipeline.
 
 ⸻
 
@@ -71,13 +77,21 @@ PART A — Core Pipeline + Static Analysis Dashboard
 Part A builds the dataset and displays analysis results through Flask.
 
 ⸻
-Step A1 - Initial database seeding
+Step A1 — Initial database seeding
 
-File: load_data.py
-Input: llm_extend_applicant_data.json 
-Output: PostgreSQL database called gradcafe and a table called applicants
+File: load_data.py  
+Input: llm_extend_applicant_data.json  
+Output: PostgreSQL database gradcafe, table applicants
 
-This script loads the Module 2 dataset (llm_extend_applicant_data.json) into the PostgreSQL database gradcafe, table applicants.  This step only needs to be run once to seed the database.
+This script loads the Module 2 dataset (llm_extend_applicant_data.json),
+which is included in module_3, into the PostgreSQL applicants table.
+
+Because the dataset is bundled with the project, anyone cloning the
+repository can seed the database without needing files from other modules.
+
+Run:
+
+python load_data.py
 
 ⸻
 
@@ -129,7 +143,9 @@ Step A4 — Load Data into PostgreSQL
 
 File: load_update.py
 
-This script inserts cleaned records into the PostgreSQL applicants table. All records are stored in the applicants table, which serves as the central dataset for analysis queries.
+This script inserts cleaned records into the PostgreSQL applicants table. 
+All records are stored in the applicants table, which serves as the central 
+dataset for analysis queries.
 
 Features:
 
@@ -257,4 +273,5 @@ This project implements:
 • Flask analytics dashboard
 • Dynamic update controls
 
-The result is a reproducible, database-backed analytics system that supports live updates through a browser interface.
+The result is a reproducible, database-backed analytics system that 
+supports live updates through a browser interface.
