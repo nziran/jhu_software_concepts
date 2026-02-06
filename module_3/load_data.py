@@ -25,8 +25,7 @@ DB_PORT = 5432
 # ----------------------------
 # Path to the cleaned/enriched JSON produced in module_2.
 # (Relative to this script's location / working directory when executed.)
-CLEANED_JSON_PATH = Path("../module_2/llm_extend_applicant_data.json")
-
+CLEANED_JSON_PATH = Path(__file__).parent / "llm_extend_applicant_data.json"
 
 def parse_date(date_str):
     """
