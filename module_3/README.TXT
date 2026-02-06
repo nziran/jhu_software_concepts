@@ -57,17 +57,42 @@ Setup and Run Instructions
 	2.	Install dependencies:
 
         	pip install -r requirements.txt
+			
+	3.  PostgreSQL setup (required)
 
-	3. Ensure PostgreSQL database exists:
+			- PostgreSQL role (username): ziran
+			- PostgreSQL database: gradcafe
+			- No password (local trust/peer auth)
 
-        	createdb gradcafe
+			- If your Postgres requires a password, set one for role ziran and 
+			  update DB connection settings accordingly
 
-    4. Create the applicants table inside the database:
+	4.  Start PostgreSQL (Homebrew):
 
-        	psql gradcafe
-		
-        	Then run the SQL commands (included in this project) to create the applicants 
-			table required by the pipeline.
+   			brew services start postgresql@16
+
+	5.  Create the role/user:
+
+   			createuser -s ziran
+
+			If the role or database already exists, PostgreSQL will report an error.
+			This is safe to ignore.
+
+	6.  Create the database owned by that user:
+
+   			createdb -O ziran gradcafe
+
+			If the database already exists, PostgreSQL will report an error - this is safe to ignore.
+
+	7.  Verify database connection:
+
+   			psql -U ziran -d gradcafe -c "SELECT 1;"
+
+			Expected output: 
+			
+			?column?
+			----------
+			1
 
 ⸻
 
