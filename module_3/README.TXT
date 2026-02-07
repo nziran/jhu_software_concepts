@@ -25,15 +25,14 @@ and loads new GradCafe records using scrape_update.py, clean_update.py, and load
 
 The data is then analyzed using query_data.py.
 
-
 ⸻
 
 Requirements
 
-• Python 3.10 or newer
+• Python 3.10+ (tested on Python 3.12 and 3.14)
 • PostgreSQL running locally
 
-Python dependencies are listed in requirements.txt.
+All Python dependency compatibility — including psycopg — is handled in requirements.txt.
 
 ⸻
 
@@ -49,14 +48,16 @@ All Python dependencies are listed in requirements.txt.
 
 Setup and Run Instructions
 
-	1.	Create and activate a virtual environment:
+	1. Create and activate a virtual environment:
 
-        	python3 -m venv .venv
-        	source .venv/bin/activate
+   		python3 -m venv .venv
+   		source .venv/bin/activate
 
-	2.	Install dependencies:
+	2. Install dependencies:
 
-        	pip install -r requirements.txt
+   		pip install -r requirements.txt
+
+		Important: All commands below should be run from inside the module_3 folder.
 			
 	3.  PostgreSQL setup (required)
 
@@ -96,122 +97,60 @@ Setup and Run Instructions
 
 ⸻
 
+
 ━━━━━━━━━━━━━━━━━━━━
-PART A — Core Pipeline + Static Analysis Dashboard
+PART A — Core Pipeline + Flask Dashboard (Required Steps)
 ━━━━━━━━━━━━━━━━━━━━
 
-Part A builds the dataset and displays analysis results through Flask.
+Part A prepares the database and launches the analysis dashboard. These steps are required for the application to run.
 
 ⸻
-Step A1 — Initial database seeding
 
-File: load_data.py  
-Input: llm_extend_applicant_data.json  
-Output: PostgreSQL database gradcafe, table applicants
+Step A1 — Seed the database
 
-This script loads the Module 2 dataset (llm_extend_applicant_data.json),
-which is included in module_3, into the PostgreSQL applicants table.
+File: load_data.py
 
-Because the dataset is bundled with the project, anyone cloning the
-repository can seed the database without needing files from other modules.
+This script:
+
+• Creates the applicants table if it does not already exist
+• Loads the bundled dataset llm_extend_applicant_data.json
+• Inserts all records into PostgreSQL
+
+This step initializes the database used by the dashboard.
 
 Run:
 
 python load_data.py
 
+You should see a message confirming rows were inserted.
+
 ⸻
 
-Step A2 — Scrape GradCafe Data
-
-File: scrape_update.py
-Output: applicant_data_update.json
-
-This script scrapes GradCafe survey pages and associated detail pages to collect applicant records.
-
-The scraper:
-
-• Fetches survey pages sequentially
-• Extracts applicant metadata
-• Fetches result pages in parallel for GPA/GRE/degree information
-• Deduplicates entries using URLs already stored in PostgreSQL
-• Saves only newly discovered records
+Step A2 — Launch the Flask dashboard
 
 Run:
-
-python scrape_update.py
-
-⸻
-
-Step A3 — Clean Raw Data
-
-File: clean_update.py
-Input: applicant_data_update.json
-Output: cleaned_applicant_data_update.json
-
-This step normalizes scraped data into a consistent schema.
-
-Cleaning operations include:
-
-• Removing HTML artifacts
-• Normalizing whitespace
-• Converting empty values to None
-• Standardizing GPA/GRE values
-• Mapping US/International status
-• Ensuring all required fields exist
-
-Run:
-
-python clean_update.py
-
-⸻
-
-Step A4 — Load Data into PostgreSQL
-
-File: load_update.py
-
-This script inserts cleaned records into the PostgreSQL applicants table. 
-All records are stored in the applicants table, which serves as the central 
-dataset for analysis queries.
-
-Features:
-
-• Converts numeric/date fields
-• Safely builds academic term strings
-• Skips duplicate entries using URL conflict protection
-
-Run:
-
-python load_update.py
-
-⸻
-
-Step A5 — Static Flask Analysis Dashboard
-
-Files:
-
-app.py
-query_data.py
-templates/index.html
-static/style.css
-
-Flask displays analysis results using database queries.
-
-query_data.py runs SQL queries to compute:
-
-• Applicant counts
-• GPA/GRE averages
-• Acceptance statistics
-• Program/university summaries
-
-Run the web app:
 
 python app.py
 
-Open browser:
+Open your browser and navigate to:
 
 http://127.0.0.1:5000/analysis
 
-This displays the static analysis dashboard.
+The dashboard will display analytics based on the seeded database.
+
+⸻
+
+Important — Automated pipeline behavior
+
+The application includes a full scrape → clean → load pipeline:
+
+scrape_update.py
+clean_update.py
+load_update.py
+
+These scripts are executed automatically by the Flask dashboard when the Pull Data button is pressed.  
+Database updates occur immediately, but analysis results only refresh when the Update Analysis button is pressed.
+Thus, manual execution of these scripts is not required to run the dashboard.
 
 ⸻
 
@@ -249,6 +188,8 @@ When pressed:
 • Updates the analysis timestamp
 • Does nothing if a Pull Data job is running
 • Displays a notification explaining why refresh is blocked
+• Database updates occur immediately, but dashboard analysis 
+  results only change when “Update Analysis” is pressed.
 
 This ensures analysis always reflects the newest dataset.
 
@@ -281,11 +222,23 @@ Dynamic controls allow repeating this pipeline without restarting the applicatio
 
 ⸻
 
-Known Limitations
+Known Limitations / Troubleshooting
 
 • Some GradCafe entries lack GPA/GRE or start-term data
 • Occasional network timeouts may skip detail pages
 • Missing fields are stored as None to preserve dataset consistency
+• If Pull Data reports “0 rows inserted,” this means the database is already up to date.
+  The scraper only adds new GradCafe entries and safely skips duplicates.
+• Pull Data updates the database only. Analysis results do NOT change until
+  the “Update Analysis” button is pressed. This behavior is intentional.
+• If scraping fails with an SSL CERTIFICATE_VERIFY_FAILED error on macOS:
+
+  		Upgrade certificates by running:
+
+      		pip install --upgrade certifi
+      		/Applications/Python\ 3.12/Install\ Certificates.command
+
+  Then restart the application.
 
 ⸻
 
