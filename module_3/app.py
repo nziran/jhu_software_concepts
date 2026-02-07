@@ -24,7 +24,8 @@ from query_data import get_analysis_cards
 import re
 from datetime import datetime
 
-# Timestamp of last analysis refresh (shown to users)
+# Cached analysis results + timestamp
+analysis_cache = []
 analysis_last_updated = None
 
 app = Flask(__name__)
@@ -114,10 +115,9 @@ def get_analysis_results():
 @app.route("/")
 @app.route("/analysis")
 def analysis():
-    """
-    Main dashboard displaying analysis cards and job status.
-    """
-    cards = get_analysis_results()
+    global analysis_cache
+
+    cards = analysis_cache
 
     return render_template(
         "index.html",
@@ -150,15 +150,14 @@ def pull_data():
 
 @app.route("/update-analysis", methods=["POST"])
 def update_analysis():
-    """
-    Refreshes analysis display timestamp if no update job is active.
-    """
-    global analysis_last_updated
+    global analysis_last_updated, analysis_cache
 
     if job_running:
         flash("Cannot update analysis while Pull Data is running.")
         return redirect(url_for("analysis"))
 
+    # Refresh cached analysis snapshot
+    analysis_cache = get_analysis_results()
     analysis_last_updated = datetime.now()
 
     flash("Analysis refreshed.")
