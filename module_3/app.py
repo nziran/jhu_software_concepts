@@ -117,11 +117,14 @@ def get_analysis_results():
 def analysis():
     global analysis_cache
 
-    cards = analysis_cache
+    # Fill cache once on first page load only.
+    # This does NOT auto-refresh later; it just prevents a blank page on startup.
+    if not analysis_cache:
+        analysis_cache = get_analysis_cards()
 
     return render_template(
         "index.html",
-        cards=cards,
+        cards=analysis_cache,
         job_running=job_running,
         job_last_message=job_last_message,
         analysis_last_updated=analysis_last_updated,
