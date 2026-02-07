@@ -32,8 +32,6 @@ Requirements
 • Python 3.10+ (tested on Python 3.12 and 3.14)
 • PostgreSQL running locally
 
-All Python dependency compatibility — including psycopg — is handled in requirements.txt.
-
 ⸻
 
 Dependencies Used
@@ -42,7 +40,7 @@ Dependencies Used
 • psycopg — PostgreSQL database connectivity
 • beautifulsoup4 — HTML parsing during scraping
 
-All Python dependencies are listed in requirements.txt.
+All Python dependencies and compatibility are listed in requirements.txt.
 
 ⸻
 
