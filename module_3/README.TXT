@@ -185,7 +185,7 @@ When pressed:
 • Refreshes analysis queries using the latest database state
 • Updates the analysis timestamp
 • Does nothing if a Pull Data job is running
-• Displays a notification explaining why refresh is blocked
+• Displays a notification explaining why Update Analysis is blocked if Pull Data active
 • Database updates occur immediately, but dashboard analysis 
   results only change when “Update Analysis” is pressed.
 
@@ -193,18 +193,6 @@ This ensures analysis always reflects the newest dataset.
 
 ⸻
 
-How Part B Works Internally
-
-app.py manages background execution using:
-
-• subprocess pipelines
-• thread locking
-• job state tracking
-• UI messaging
-
-The webpage auto-refreshes while data pulls are running so users can observe progress.
-
-⸻
 
 Data Flow Overview
 
