@@ -208,7 +208,7 @@ Dynamic controls allow repeating this pipeline without restarting the applicatio
 
 ⸻
 
-Known Limitations / Troubleshooting
+Known Limitations / Troubleshooting 
 
 • Some GradCafe entries lack GPA/GRE or start-term data
 • Occasional network timeouts may skip detail pages
@@ -217,6 +217,22 @@ Known Limitations / Troubleshooting
   The scraper only adds new GradCafe entries and safely skips duplicates.
 • Pull Data updates the database only. Analysis results do NOT change until
   the “Update Analysis” button is pressed. This behavior is intentional.
+• SQL Edge-Case Handling (Q7–Q9):
+
+			Queries Q7–Q9 were intentionally expanded to detect common real-world 
+			naming variations in GradCafe data.
+
+			Because applicant entries are user-generated, fields such as university names, 
+			degree labels, and program titles may appear in multiple formats 
+			(e.g., abbreviations, alternate spellings, or shorthand).
+
+			To improve accuracy, these queries include broader pattern matching using 
+			SQL ILIKE and REGEX conditions across both scraped fields and LLM-normalized fields. 
+			This ensures that equivalent entries — such as variations of Computer Science, 
+			Masters/MS, or university naming differences — are counted consistently.
+
+			This edge-case handling increases robustness without altering the underlying dataset.
+
 • If scraping fails with an SSL CERTIFICATE_VERIFY_FAILED error on macOS:
 
   		Upgrade certificates by running:
