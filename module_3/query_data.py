@@ -270,7 +270,7 @@ def get_analysis_cards():
             # - term contains 2026
             # - status indicates acceptance
             # - degree indicates PhD
-            # - program is CS (scraped OR LLM program)
+            # - program is CS (non-LLM)
             # - university matches one of: Georgetown, MIT, Stanford, Carnegie Mellon
             cur.execute(
                 """
@@ -372,8 +372,13 @@ def get_analysis_cards():
             # ----------------------------
             # Q11 (custom 2): Top 5 universities for Physics PhD
             # ----------------------------
-            # Filters rows where program exactly equals 'Physics PhD', then groups by university.
-            # Note: this relies on consistent program naming in your dataset.
+            # This query identifies applications for a Physics PhD and then ranks universities by how frequently they appear. 
+            # The program filter uses a case-insensitive regular expression to match entries that contain both “physics” and “phd” (or “ph.d.”), 
+            # in either order. This allows the query to capture real-world variations such as “Physics PhD,” “PhD Physics,” or “Physics – Ph.D.” 
+            # instead of relying on an exact string match.
+            # Rows with missing or blank university values are excluded so the grouping remains meaningful. 
+            # The remaining rows are grouped by university, counted, sorted from highest to lowest frequency, 
+            # and the top five universities are returned.
             cur.execute(
                 """
             SELECT university, COUNT(*) AS count
