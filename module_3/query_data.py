@@ -226,12 +226,32 @@ def get_analysis_cards():
                 """
                 SELECT COUNT(*)
                 FROM applicants
-                WHERE university ILIKE '%johns hopkins%'
-                  AND degree ILIKE '%master%'
-                  AND (
-                        program ILIKE '%computer science%'
-                     OR llm_generated_program ILIKE '%computer science%'
-                  );
+                WHERE university ILIKE ANY (ARRAY[
+                    '%johns hopkins%',
+                    '%john hopkins%',
+                    '%jhu%'
+                    ])
+                AND degree ILIKE ANY (ARRAY[
+                    '%master%',
+                    '%ms%',
+                    '%m.s%'
+                    ])
+                AND (
+                    program ILIKE ANY (ARRAY[
+                        '%computer science%',
+                        '%computer sciences%',
+                        '%computer sci%',
+                        '%comp sci%',
+                        '%cs%'
+                    ])
+                    OR llm_generated_program ILIKE ANY (ARRAY[
+                        '%computer science%',
+                        '%computer sciences%',
+                        '%computer sci%',
+                        '%comp sci%',
+                        '%cs%'
+                    ])
+                    );
                 """
             )
             q7 = cur.fetchone()[0]
@@ -254,22 +274,25 @@ def get_analysis_cards():
             # - university matches one of: Georgetown, MIT, Stanford, Carnegie Mellon
             cur.execute(
                 """
-                SELECT COUNT(*)
-                FROM applicants
-                WHERE term ILIKE '%2026%'
-                  AND status ILIKE '%accept%'
-                  AND degree ILIKE '%phd%'
-                  AND (
-                        program ILIKE '%computer science%'
-                     OR llm_generated_program ILIKE '%computer science%'
-                  )
-                  AND (
-                        university ILIKE '%georgetown%'
-                     OR university ILIKE '%massachusetts institute of technology%'
-                     OR university ILIKE '%mit%'
-                     OR university ILIKE '%stanford%'
-                     OR university ILIKE '%carnegie mellon%'
-                  );
+            SELECT COUNT(*)
+            FROM applicants
+            WHERE term ILIKE '%2026%'
+            AND status ILIKE ANY (ARRAY[
+                    '%accept%',
+                    '%admit%'
+                ])
+            AND degree ~* '\\m(phd|ph\\.d\\.)\\M'
+            AND program ~* '(computer\\s*science|computer\\s*sci|comp\\s*sci|\\mcs\\M)'
+            AND (
+                    university ILIKE ANY (ARRAY[
+                        '%georgetown%',
+                        '%massachusetts institute of technology%',
+                        '%mit%',
+                        '%stanford%',
+                        '%carnegie mellon%',
+                        '%cmu%'
+                    ])
+                );
                 """
             )
             q8 = cur.fetchone()[0]
@@ -288,18 +311,25 @@ def get_analysis_cards():
             # (Sometimes scraped fields are inconsistent; LLM fields may consolidate variants.)
             cur.execute(
                 """
-                SELECT COUNT(*)
-                FROM applicants
-                WHERE term ILIKE '%2026%'
-                  AND status ILIKE '%accept%'
-                  AND degree ILIKE '%phd%'
-                  AND llm_generated_program ILIKE '%computer science%'
-                  AND (
-                        llm_generated_university ILIKE '%georgetown%'
-                     OR llm_generated_university ILIKE '%mit%'
-                     OR llm_generated_university ILIKE '%stanford%'
-                     OR llm_generated_university ILIKE '%carnegie mellon%'
-                  );
+            SELECT COUNT(*)
+            FROM applicants
+            WHERE term ILIKE '%2026%'
+            AND status ILIKE ANY (ARRAY[
+                    '%accept%',
+                    '%admit%'
+                ])
+            AND degree ~* '\\m(phd|ph\\.d\\.)\\M'
+            AND llm_generated_program ~* '(computer\\s*science|computer\\s*sci|comp\\s*sci|\\mcs\\M)'
+            AND (
+                    llm_generated_university ILIKE ANY (ARRAY[
+                        '%georgetown%',
+                        '%mit%',
+                        '%massachusetts institute of technology%',
+                        '%stanford%',
+                        '%carnegie mellon%',
+                        '%cmu%'
+                    ])
+                );
                 """
             )
             q9 = cur.fetchone()[0]
@@ -346,13 +376,14 @@ def get_analysis_cards():
             # Note: this relies on consistent program naming in your dataset.
             cur.execute(
                 """
-                SELECT university, COUNT(*) AS count
-                FROM applicants
-                WHERE program = 'Physics PhD'
-                  AND university IS NOT NULL AND university <> ''
-                GROUP BY university
-                ORDER BY count DESC
-                LIMIT 5;
+            SELECT university, COUNT(*) AS count
+            FROM applicants
+            WHERE program ~* '(\\mphysics\\M.*\\m(phd|ph\\.d\\.)\\M|\\m(phd|ph\\.d\\.)\\M.*\\mphysics\\M)'
+            AND university IS NOT NULL
+            AND university <> ''
+            GROUP BY university
+            ORDER BY count DESC
+            LIMIT 5;
                 """
             )
             top5_physics_unis = cur.fetchall()
