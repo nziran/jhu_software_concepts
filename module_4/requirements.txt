@@ -4,3 +4,4 @@ pytest-cov
 psycopg[binary]
 beautifulsoup4
 requests
+lxml
