@@ -1,0 +1,7 @@
+[run]
+source = src
+omit =
+    src/scrape_update.py
+
+[report]
+show_missing = True

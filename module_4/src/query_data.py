@@ -420,5 +420,5 @@ def main():
 
 
 # Standard entrypoint guard so the file can be imported without executing main().
-if __name__ == "__main__":
-    main()
+if __name__ == "__main__":  # pragma: no cover
+    main()  # pragma: no cover

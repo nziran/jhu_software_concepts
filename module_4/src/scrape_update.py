@@ -5,12 +5,11 @@
 # writes the raw update set to applicant_data_update.json.
 
 import json
-import os
 import re
 import time
 import socket
 from datetime import datetime, timezone
-from urllib.request import Request, urlopen
+import urllib.request as urllib_request
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -86,11 +85,9 @@ DETAIL_FUTURE_TIMEOUT_S = 60  # per detail-page future timeout
 # Helpers: HTTP fetching
 # -----------------------------
 def _fetch_html(url: str, timeout: int = TIMEOUT_S) -> str:
-    """Fetch page HTML with a user-agent header."""
-    req = Request(url, headers={"User-Agent": USER_AGENT})
-    with urlopen(req, timeout=timeout) as resp:
+    req = urllib_request.Request(url, headers={"User-Agent": USER_AGENT})
+    with urllib_request.urlopen(req, timeout=timeout) as resp:
         return resp.read().decode("utf-8", errors="ignore")
-
 
 def _safe_fetch_html(url: str) -> str | None:
     """

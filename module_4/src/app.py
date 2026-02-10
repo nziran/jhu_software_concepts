@@ -15,7 +15,7 @@ Long-running update work is executed in a background thread so the web
 interface remains responsive.
 """
 
-from flask import Flask, render_template, redirect, url_for, flash
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
 import subprocess
 import sys
 import threading
@@ -30,6 +30,9 @@ analysis_last_updated = None
 
 app = Flask(__name__)
 app.secret_key = "dev"  # required for Flask flash messaging
+
+def wants_json():
+    return request.accept_mimetypes.best == "application/json"
 
 
 # ----------------------------------------------------------
@@ -99,6 +102,7 @@ def run_update_pipeline():
     finally:
         with job_lock:
             job_running = False
+            print("DEBUG: job_running reset to False")
 
 
 # ----------------------------------------------------------
@@ -142,6 +146,8 @@ def pull_data():
 
     with job_lock:
         if job_running:
+            if wants_json():
+                return jsonify(busy=True), 409
             flash("Pull Data is already running.")
             return redirect(url_for("analysis"))
 
@@ -149,15 +155,21 @@ def pull_data():
         t = threading.Thread(target=run_update_pipeline, daemon=True)
         t.start()
 
+    if wants_json():
+        return jsonify(ok=True), 202
+
     flash("Pull Data started. Check status below.")
     return redirect(url_for("analysis"))
 
 
 @app.route("/update-analysis", methods=["POST"])
+@app.route("/update-analysis", methods=["POST"])
 def update_analysis():
     global analysis_last_updated, analysis_cache
 
     if job_running:
+        if wants_json():
+            return jsonify(busy=True), 409
         flash("Cannot update analysis while Pull Data is running.")
         return redirect(url_for("analysis"))
 
@@ -165,12 +177,24 @@ def update_analysis():
     analysis_cache = get_analysis_results()
     analysis_last_updated = datetime.now()
 
+    if wants_json():
+        return jsonify(ok=True), 200
+
     flash("Analysis refreshed.")
     return redirect(url_for("analysis"))
+
+
+
+def create_app():
+    return app
+
+
+def main():
+    app.run(debug=True, use_reloader=False, port=5050)
 
 
 # ----------------------------------------------------------
 # Application entry point
 # ----------------------------------------------------------
-if __name__ == "__main__":
-    app.run(debug=True, use_reloader=False)
+if __name__ == "__main__":  # pragma: no cover
+    main()
