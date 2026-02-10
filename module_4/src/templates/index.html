@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <!-- Basic metadata + responsive layout -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Browser tab title -->
+  <title>GradCafe Analysis</title>
+
+  <!-- Main stylesheet -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}" />
+</head>
+
+<!--
+  While a background Pull Data job is running,
+  automatically refresh the page so the user sees updated status.
+-->
+{% if job_running %}
+<script>
+  // Auto-refresh every 2 seconds during active scrape/update job
+  setTimeout(() => window.location.reload(), 2000);
+</script>
+{% endif %}
+
+<body>
+  <div class="container">
+
+    <!-- Page header / identity -->
+    <header class="header">
+      <h1>GradCafe Data Analysis</h1>
+      <p>PostgreSQL + Flask dynamic query results</p>
+    </header>
+
+    <!-- Flash message area for status notifications -->
+    {% with messages = get_flashed_messages() %}
+    {% if messages %}
+    <div class="flash">
+      <!-- Show most recent message -->
+      <div class="flash-msg">{{ messages[-1] }}</div>
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <!-- ===============================
+         Control Panel (user actions)
+         =============================== -->
+    <section class="controls">
+
+      <!-- Pull Data: triggers scraper pipeline -->
+      <form action="{{ url_for('pull_data') }}" method="post">
+        <button type="submit">
+          Pull Data
+        </button>
+        <p class="control-text">
+          Scrape new GradCafe entries and update the database.
+        </p>
+      </form>
+
+      <!-- Update Analysis: refresh analysis view -->
+      <form action="{{ url_for('update_analysis') }}" method="post">
+        <button type="submit">
+          Update Analysis
+        </button>
+        <p class="control-text">
+          Refresh analysis with the newest data.
+        </p>
+      </form>
+
+    </section>
+
+    <!-- ===============================
+         Job / Analysis Status Display
+         =============================== -->
+    <div class="job-status">
+
+      <!-- Current background job status message -->
+      {{ job_last_message }}
+
+      <!-- Timestamp showing last analysis refresh -->
+      {% if analysis_last_updated %}
+      <div>
+        Analysis last refreshed:
+        {{ analysis_last_updated.strftime("%I:%M %p — %b %d, %Y") }}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Optional legacy timestamp block -->
+    {% if last_analysis_at %}
+    <div class="job-status">
+      Last analysis refresh: {{ last_analysis_at }}
+    </div>
+    {% endif %}
+
+    <!-- ===============================
+         Analysis Cards Grid
+         Displays query results dynamically
+         =============================== -->
+    <main class="grid">
+
+      <!-- Loop through analysis results -->
+      {% for card in cards %}
+      <div class="card">
+
+        <!-- Card identifier (Q1, Q2, etc.) -->
+        <div class="card-id">{{ card.id }}</div>
+
+        <!-- Question text -->
+        <div class="card-question">{{ card.question }}</div>
+
+        <!-- Query result / answer -->
+        <div class="card-answer" style="white-space: pre-line;">
+          {{ card.answer }}
+        </div>
+
+      </div>
+      {% endfor %}
+
+    </main>
+
+  </div>
+</body>
+
+</html>
