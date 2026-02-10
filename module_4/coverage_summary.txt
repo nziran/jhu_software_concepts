@@ -1,0 +1,21 @@
+..................................................                       [100%]
+=============================== warnings summary ===============================
+tests/test_load_data.py::test_load_data_runs_as_script_hits_main_guard
+  <frozen runpy>:128: RuntimeWarning: 'src.load_data' found in sys.modules after import of package 'src', but prior to execution of 'src.load_data'; this may result in unpredictable behaviour
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.12.7-final-0 _______________
+
+Name                  Stmts   Miss  Cover   Missing
+---------------------------------------------------
+src/__init__.py           0      0   100%
+src/app.py               91      0   100%
+src/clean_update.py     106      0   100%
+src/load_data.py         39      0   100%
+src/load_update.py       45      0   100%
+src/query_data.py        58      0   100%
+---------------------------------------------------
+TOTAL                   339      0   100%
+Required test coverage of 100% reached. Total coverage: 100.00%
+50 passed, 1 warning in 0.70s
