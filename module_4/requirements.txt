@@ -1,4 +1,6 @@
 Flask
-psycopg[binary]
 pytest
 pytest-cov
+psycopg[binary]
+beautifulsoup4
+requests
