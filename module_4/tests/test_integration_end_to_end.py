@@ -2,6 +2,7 @@ import json
 import re
 import pytest
 import psycopg
+import os
 
 
 TEST_URLS = [
@@ -10,10 +11,14 @@ TEST_URLS = [
     "https://example.com/integration-3",
 ]
 
-
 def _connect():
-    return psycopg.connect(dbname="gradcafe", user="ziran", host="localhost", port=5432)
-
+    return psycopg.connect(
+        dbname=os.getenv("PGDATABASE", "gradcafe"),
+        user=os.getenv("PGUSER", "ziran"),
+        password=os.getenv("PGPASSWORD", "ziran"),
+        host=os.getenv("PGHOST", "localhost"),
+        port=int(os.getenv("PGPORT", "5432")),
+    )
 
 def _delete_test_rows(conn):
     with conn.cursor() as cur:

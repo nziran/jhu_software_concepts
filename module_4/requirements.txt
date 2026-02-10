@@ -1,7 +1,7 @@
-Flask
+flask
+psycopg[binary]
 pytest
 pytest-cov
-psycopg[binary]
-beautifulsoup4
 requests
+beautifulsoup4
 lxml

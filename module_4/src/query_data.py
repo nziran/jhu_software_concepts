@@ -5,7 +5,7 @@ Runs a set of SQL queries against the `applicants` table in the `gradcafe` Postg
 and returns results formatted as “analysis cards” (id/question/answer dicts) for your
 Analysis web page (and also supports printing them from CLI).
 """
-
+import os
 import psycopg
 
 # ----------------------------
@@ -34,10 +34,11 @@ def get_analysis_cards():
 
     # Open a database connection (auto-closes at end of `with` block).
     with psycopg.connect(
-        dbname=DB_NAME,
-        user=DB_USER,
-        host=DB_HOST,
-        port=DB_PORT,
+        dbname="gradcafe",
+        user="ziran",
+        host="localhost",
+        port=5432,
+        password=os.getenv("PGPASSWORD"),
     ) as conn:
         # Cursor is used to execute SQL statements and fetch results.
         with conn.cursor() as cur:
