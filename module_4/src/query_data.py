@@ -134,16 +134,21 @@ def get_analysis_cards():
                   AND (gre_aw BETWEEN 0 AND 6 OR gre_aw IS NULL);
                 """
             )
+            
             avg_gpa, avg_gre_total, avg_gre_section, avg_aw = cur.fetchone()
+
+            def _fmt(x, spec):
+                return "N/A" if x is None else format(x, spec)
+
             cards.append(
                 {
                     "id": "Q3",
                     "question": "What is the average GPA, GRE (Total), GRE (Section), and GRE AW of applicants who provide these metrics?",
                     "answer": (
-                        f"Avg GPA: {avg_gpa:.3f}, "
-                        f"Avg GRE Total: {avg_gre_total:.2f}, "
-                        f"Avg GRE (Section): {avg_gre_section:.2f}, "
-                        f"Avg GRE AW: {avg_aw:.2f}"
+                        f"Avg GPA: {_fmt(avg_gpa, '.3f')}, "
+                        f"Avg GRE Total: {_fmt(avg_gre_total, '.2f')}, "
+                        f"Avg GRE (Section): {_fmt(avg_gre_section, '.2f')}, "
+                        f"Avg GRE AW: {_fmt(avg_aw, '.2f')}"
                     ),
                 }
             )
