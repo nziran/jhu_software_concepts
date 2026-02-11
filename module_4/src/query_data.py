@@ -34,12 +34,12 @@ def _db_params():
 
 def get_analysis_cards():
     """
-    Runs a curated set of analysis queries and returns them as a list of dicts:
+    Runs a curated set of analysis queries and returns them as a list of dicts::
 
         [
-          {"id": "Q1", "question": "...", "answer": "..."},
-          {"id": "Q2", "question": "...", "answer": "..."},
-          ...
+            {"id": "Q1", "question": "...", "answer": "..."},
+            {"id": "Q2", "question": "...", "answer": "..."},
+            ...
         ]
 
     The caller (e.g., your Flask route) can render each card in the UI.
@@ -424,9 +424,11 @@ def get_analysis_cards():
 
 def main():
     """
-    Simple CLI runner:
-      - calls get_analysis_cards()
-      - prints each card in a readable format
+    Simple CLI runner::
+
+        - Calls get_analysis_cards()
+        - Prints each card in a readable format
+
     Useful for quick local testing outside the web app.
     """
     cards = get_analysis_cards()
