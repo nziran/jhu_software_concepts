@@ -1,11 +1,55 @@
+import os
 import pytest
+import psycopg
 from src.app import create_app
 
+def _pg_env(name: str, fallback: str | None = None) -> str | None:
+    # Prefer standard libpq env vars, then POSTGRES_* from actions services
+    return (
+        os.getenv(name)
+        or os.getenv(name.replace("PG", "POSTGRES_"))
+        or fallback
+    )
 
-@pytest.fixture
+def _connect():
+    return psycopg.connect(
+        dbname=_pg_env("PGDATABASE", "gradcafe"),
+        user=_pg_env("PGUSER", "ziran"),
+        password=_pg_env("PGPASSWORD", "ziran"),  # CI has it; graders can set env too
+        host=_pg_env("PGHOST", "localhost"),
+        port=int(_pg_env("PGPORT", "5432") or 5432),
+    )
+
+@pytest.fixture(scope="session", autouse=True)
+def ensure_schema():
+    """Make CI/graders portable: ensure applicants table exists before any tests."""
+    ddl = """
+    CREATE TABLE IF NOT EXISTS applicants (
+        p_id BIGSERIAL PRIMARY KEY,
+        program TEXT,
+        university TEXT,
+        comments TEXT,
+        date_added DATE,
+        url TEXT UNIQUE,
+        status TEXT,
+        term TEXT,
+        us_or_international TEXT,
+        gpa FLOAT,
+        gre FLOAT,
+        gre_v FLOAT,
+        gre_aw FLOAT,
+        degree TEXT,
+        llm_generated_program TEXT,
+        llm_generated_university TEXT
+    );
+    """
+    with _connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(ddl)
+        conn.commit()
+
+@pytest.fixture()
 def client():
     app = create_app()
-    app.config["TESTING"] = True
-
-    with app.test_client() as client:
-        yield client
+    app.config.update(TESTING=True)
+    return app.test_client()
