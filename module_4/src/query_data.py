@@ -18,6 +18,12 @@ DB_HOST = "localhost"
 DB_PORT = 5432
 
 def _db_params():
+    # Preferred in CI/portability: one URL
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        return db_url  # pragma: no cover
+
+    # Fallback: discrete env vars (works great locally)
     return dict(
         dbname=os.getenv("PGDATABASE", DB_NAME),
         user=os.getenv("PGUSER", DB_USER),
