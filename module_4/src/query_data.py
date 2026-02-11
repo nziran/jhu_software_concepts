@@ -17,6 +17,14 @@ DB_USER = "ziran"
 DB_HOST = "localhost"
 DB_PORT = 5432
 
+def _db_params():
+    return dict(
+        dbname=os.getenv("PGDATABASE", DB_NAME),
+        user=os.getenv("PGUSER", DB_USER),
+        password=os.getenv("PGPASSWORD"),
+        host=os.getenv("PGHOST", DB_HOST),
+        port=int(os.getenv("PGPORT", str(DB_PORT))),
+    )
 
 def get_analysis_cards():
     """
@@ -33,14 +41,9 @@ def get_analysis_cards():
     cards = []
 
     # Open a database connection (auto-closes at end of `with` block).
-    with psycopg.connect(
-        dbname="gradcafe",
-        user="ziran",
-        host="localhost",
-        port=5432,
-        password=os.getenv("PGPASSWORD"),
-    ) as conn:
-        # Cursor is used to execute SQL statements and fetch results.
+    with psycopg.connect(**_db_params()) as conn:
+
+    # Cursor is used to execute SQL statements and fetch results.
         with conn.cursor() as cur:
             # ----------------------------
             # Q0: Total rows in database
