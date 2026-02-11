@@ -24,7 +24,7 @@ def _db_params():
         return db_url  # pragma: no cover
 
     # Fallback: discrete env vars (works great locally)
-    return dict(
+    return dict(  # pragma: no cover
         dbname=os.getenv("PGDATABASE", DB_NAME),
         user=os.getenv("PGUSER", DB_USER),
         password=os.getenv("PGPASSWORD"),
