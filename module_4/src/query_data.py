@@ -47,7 +47,7 @@ def get_analysis_cards():
     cards = []
 
     # Open a database connection (auto-closes at end of `with` block).
-    with psycopg.connect(**_db_params()) as conn:
+    with psycopg.connect(_db_params()) as conn:
 
     # Cursor is used to execute SQL statements and fetch results.
         with conn.cursor() as cur:
