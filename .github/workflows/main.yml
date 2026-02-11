@@ -40,10 +40,8 @@ jobs:
 
       - name: Run tests
         env:
-          DB_NAME: gradcafe
-          DB_USER: ziran
-          DB_HOST: localhost
-          DB_PORT: 5432
+          DATABASE_URL: postgresql://ziran:ziran@localhost:5432/gradcafe
+          PGPASSWORD: ziran
         run: |
           cd module_4
-          pytest
+          pytest -m "web or buttons or analysis or db or integration"
