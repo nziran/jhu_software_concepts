@@ -78,7 +78,7 @@ Setup Instructions
 
     Run:
 
-    export DATABASE_URL=“postgresql://ziran@localhost:5432/gradcafe”
+    export DATABASE_URL="postgresql://ziran@localhost:5432/gradcafe"
 
     Step D — Verify database connection
 
@@ -117,23 +117,28 @@ Environment Variable Reminder (Important)
 
     Open browser:
 
-    http://127.0.0.1:5000/analysis
+    http://127.0.0.1:5050/analysis
 
 ---
 
-Running Tests
+Running tests (marker policy check):
 
-Run the entire marked suite:
+    pytest -m “web or buttons or analysis or db or integration”
 
-pytest -m "web or buttons or analysis or db or integration"
+    Runs the full marked suite and verifies that all tests are properly marked according to assignment policy.
 
-Generate coverage report:
+---
 
-pytest --cov=src
+Running tests with coverage enforcement:
+
+    pytest
+
+    Runs the entire test suite with pytest-cov enforcing 100% coverage as configured in pytest.ini.
 
 Test Coverage Summary
 
 The test suite validates all required behaviors for the GradCafe application.
+
 Representative tests include:
 
 • Flask app & rendering — test_flask_page.py
@@ -193,6 +198,7 @@ Documentation includes:
 • Architecture explanation
 • API autodoc reference
 • Testing guide
+• Operational Notes (busy-state policy, idempotency, troubleshooting)
 
 Published documentation:
 
@@ -230,6 +236,8 @@ Live Sphinx documentation:
 
 https://gradcafe-ziran.readthedocs.io/en/latest/
 
+Documentation includes Overview, Architecture, API reference, Testing guide, 
+and Operational Notes (busy-state policy, idempotency, troubleshooting).
 ---
 
 Notes
@@ -240,6 +248,7 @@ Notes
 • Analysis percentages formatted to two decimals
 
 ---
+
 
 Author
 Navid Ziran
