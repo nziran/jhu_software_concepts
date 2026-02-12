@@ -18,12 +18,10 @@ DB_HOST = "localhost"
 DB_PORT = 5432
 
 def _db_params():
-    # Preferred in CI/portability: one URL
     db_url = os.getenv("DATABASE_URL")
-    if db_url:
-        return db_url  # pragma: no cover
+    if db_url:  # pragma: no cover
+        return db_url
 
-    # Fallback: discrete env vars (works great locally)
     return dict(  # pragma: no cover
         dbname=os.getenv("PGDATABASE", DB_NAME),
         user=os.getenv("PGUSER", DB_USER),
@@ -47,7 +45,8 @@ def get_analysis_cards():
     cards = []
 
     # Open a database connection (auto-closes at end of `with` block).
-    with psycopg.connect(_db_params()) as conn:
+    db = _db_params()
+    with psycopg.connect(db) if isinstance(db, str) else psycopg.connect(**db) as conn:
 
     # Cursor is used to execute SQL statements and fetch results.
         with conn.cursor() as cur:

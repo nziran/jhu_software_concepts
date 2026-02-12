@@ -92,6 +92,25 @@ Setup Instructions
 
     This confirms the database is configured correctly.
 
+Environment Variable Reminder (Important)
+
+    Environment variables do not persist when you open a new terminal session. If you close Terminal and reopen it, you must re-export the database connection string.
+
+    Verify the variable is set:
+
+    echo $DATABASE_URL
+
+    If nothing prints, re-export it:
+
+    export DATABASE_URL=“postgresql://ziran@localhost:5432/gradcafe”
+
+    You can confirm the database connection with:
+
+    psql “$DATABASE_URL” -c “SELECT COUNT(*) FROM applicants;”
+
+    If successful, PostgreSQL will return a row count. This confirms the database is reachable and correctly configured.
+
+
 4. Run the application
 
     python -m src.app
