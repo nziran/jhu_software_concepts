@@ -131,15 +131,28 @@ Generate coverage report:
 
 pytest --cov=src
 
-Tests verify:
+Test Coverage Summary
 
-• Web endpoints
-• Busy gating behavior
-• Database writes and idempotency
-• Analysis formatting
-• End-to-end workflows
+The test suite validates all required behaviors for the GradCafe application.
+Representative tests include:
 
-All tests are marked per assignment requirements.
+• Flask app & rendering — test_flask_page.py
+Verifies app creation, route availability, and correct rendering of the analysis page.
+
+• Buttons & busy-state behavior — test_buttons.py
+Ensures pull/update endpoints respond correctly and enforce concurrency gating.
+
+• Analysis formatting — test_analysis_format.py
+Confirms labels and percentage formatting rules.
+
+• Database writes — test_db_insert.py
+Validates inserts, idempotency, and query integrity.
+
+• Integration workflows — test_integration_end_to_end.py
+Simulates pull → update → render pipeline using injected test data.
+
+Additional unit tests provide full branch coverage of scraping, loading, query logic, and helper functions.
+
 
 ---
 
