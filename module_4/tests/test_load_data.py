@@ -116,6 +116,10 @@ def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):
 
         # cleanup
         _delete_test_rows(conn)
+        
+@pytest.mark.filterwarnings(
+    "ignore:'src\\.load_data' found in sys\\.modules.*:RuntimeWarning"
+)
 
 @pytest.mark.db
 def test_load_data_runs_as_script_hits_main_guard(tmp_path, monkeypatch):
