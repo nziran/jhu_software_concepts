@@ -14,3 +14,4 @@ GradCafe Documentation
    architecture
    api
    testing
+   operational_notes
