@@ -25,7 +25,18 @@ DB_PORT = 5432
 # ----------------------------
 # Path to the cleaned/enriched JSON produced in module_2.
 # (Relative to this script's location / working directory when executed.)
-CLEANED_JSON_PATH = Path(__file__).parent / "llm_extend_applicant_data.json"
+ROOT_DIR = Path(__file__).resolve().parents[1]  # module_4/
+CANDIDATES = [
+    ROOT_DIR / "llm_extend_applicant_data.json",
+    ROOT_DIR / "src" / "llm_extend_applicant_data.json",
+]
+
+CLEANED_JSON_PATH = next((p for p in CANDIDATES if p.exists()), None)
+if CLEANED_JSON_PATH is None:
+    raise FileNotFoundError(
+        "Missing cleaned JSON. Expected one of:\n"
+        + "\n".join(str(p) for p in CANDIDATES)
+    )
 
 def parse_date(date_str):
     """
