@@ -189,13 +189,16 @@ def update_analysis():
 def create_app():
     return app
 
-
 def main():
-    app.run(debug=True, use_reloader=False, port=5050)
+    # Allows tests to execute __main__ safely without starting a server
+    if os.getenv("APP_DRY_RUN") == "1":
+        print("APP_DRY_RUN: skipping app.run()")
+        return
 
+    app.run(debug=True, use_reloader=False, port=5050)
 
 # ----------------------------------------------------------
 # Application entry point
 # ----------------------------------------------------------
-if __name__ == "__main__":  # pragma: no cover
+if __name__ == "__main__":
     main()

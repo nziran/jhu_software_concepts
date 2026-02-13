@@ -19,10 +19,10 @@ DB_PORT = 5432
 
 def _db_params():
     db_url = os.getenv("DATABASE_URL")
-    if db_url:  # pragma: no cover
+    if db_url:  
         return db_url
 
-    return dict(  # pragma: no cover
+    return dict(  
         dbname=os.getenv("PGDATABASE", DB_NAME),
         user=os.getenv("PGUSER", DB_USER),
         password=os.getenv("PGPASSWORD"),
@@ -436,5 +436,5 @@ def main():
 
 
 # Standard entrypoint guard so the file can be imported without executing main().
-if __name__ == "__main__":  # pragma: no cover
-    main()  # pragma: no cover
+if __name__ == "__main__":   
+    main()
