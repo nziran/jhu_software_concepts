@@ -48,7 +48,7 @@ def get_analysis_cards():
     db = _db_params()
     with psycopg.connect(db) if isinstance(db, str) else psycopg.connect(**db) as conn:
 
-    # Cursor is used to execute SQL statements and fetch results.
+        # Cursor is used to execute SQL statements and fetch results.
         with conn.cursor() as cur:
             # ----------------------------
             # Q0: Total rows in database

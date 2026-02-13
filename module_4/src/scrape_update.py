@@ -16,6 +16,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from bs4 import BeautifulSoup
 import psycopg
+import os
 
 # -----------------------------
 # Database connection settings
@@ -44,12 +45,8 @@ def load_existing_urls_from_db() -> set[str]:
     - if it already exists in the database, it is skipped
     """
     urls = set()
-    with psycopg.connect(
-        dbname=DB_NAME,
-        user=DB_USER,
-        host=DB_HOST,
-        port=DB_PORT
-    ) as conn:
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
+        
         with conn.cursor() as cur:
             cur.execute("SELECT url FROM applicants WHERE url IS NOT NULL;")
             for (u,) in cur.fetchall():

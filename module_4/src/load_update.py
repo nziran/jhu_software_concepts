@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 import psycopg
+import os
 
 # Database connection configuration
 DB_NAME = "gradcafe"
@@ -63,12 +64,7 @@ def main():
     inserted = 0
 
     # Open database connection
-    with psycopg.connect(
-        dbname=DB_NAME,
-        user=DB_USER,
-        host=DB_HOST,
-        port=DB_PORT,
-    ) as conn:
+    with psycopg.connect(conninfo=os.environ["DATABASE_URL"]) as conn:
 
         with conn.cursor() as cur:
 

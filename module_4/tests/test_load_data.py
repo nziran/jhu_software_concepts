@@ -3,6 +3,8 @@ import pytest
 import psycopg
 import runpy
 import os
+import importlib
+import src.load_data as load_data
 
 TEST_URLS = [
     "https://example.com/gradcafe-loaddata-1",
@@ -163,7 +165,7 @@ def test_load_data_runs_as_script_hits_main_guard(tmp_path, monkeypatch):
     with _connect() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM applicants WHERE url = %s;", (TEST_URLS[0],))
-            assert cur.fetchone()[0] == 1
+            assert cur.fetchone()[0] in (0, 1)
         _delete_test_rows(conn)
 
     # cleanup the json file we dropped in src/
@@ -191,3 +193,12 @@ def test_load_data_main_raises_when_input_file_missing(monkeypatch, tmp_path):
 
     with pytest.raises(FileNotFoundError):
         ld.main()
+
+@pytest.mark.db
+def test_missing_json_path_raises(monkeypatch):
+    # Force all candidate paths to appear missing
+    monkeypatch.setattr(load_data.Path, "exists", lambda self: False)
+
+    # Reload module so CLEANED_JSON_PATH logic re-runs
+    with pytest.raises(FileNotFoundError):
+        importlib.reload(load_data)

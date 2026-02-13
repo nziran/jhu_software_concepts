@@ -10,6 +10,7 @@ import json
 from pathlib import Path
 from datetime import datetime
 import psycopg
+import os
 
 # ----------------------------
 # Database connection settings
@@ -90,12 +91,7 @@ def main():
 
     # ---- 3) Open database connection ----
     # Context manager will close the connection automatically.
-    with psycopg.connect(
-        dbname=DB_NAME,
-        user=DB_USER,
-        host=DB_HOST,
-        port=DB_PORT
-    ) as conn:
+    with psycopg.connect(os.environ["DATABASE_URL"]) as conn:
 
         # ---- 4) Use a cursor to run SQL ----
         with conn.cursor() as cur:

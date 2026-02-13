@@ -23,13 +23,14 @@ from pathlib import Path
 from src.query_data import get_analysis_cards
 import re
 from datetime import datetime
+import os
 
 # Cached analysis results + timestamp
 analysis_cache = []
 analysis_last_updated = None
 
 app = Flask(__name__)
-app.secret_key = "dev"  # required for Flask flash messaging
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev") # required for Flask flash messaging
 
 def wants_json():
     return request.accept_mimetypes.best == "application/json"
@@ -162,7 +163,7 @@ def pull_data():
     return redirect(url_for("analysis"))
 
 
-@app.route("/update-analysis", methods=["POST"])
+
 @app.route("/update-analysis", methods=["POST"])
 def update_analysis():
     global analysis_last_updated, analysis_cache
