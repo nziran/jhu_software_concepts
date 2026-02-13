@@ -42,7 +42,7 @@ postgresql://user:password@localhost:5432/gradcafe
 
 ---
 
-Setup Instructions
+Setup Instructions (assuming fresh install with no gradcafe db and no applicants table)
 
 1. Create and activate virtual environment
 
@@ -71,14 +71,18 @@ Setup Instructions
 
     Run:
 
-    createuser ziran
-    createdb -O ziran gradcafe
+    createuser <your_username>
+    createdb -O <your_username> gradcafe
+
+    Replace <your_username> with your local PostgreSQL username.
 
     Step C — Set environment variable
 
     Run:
 
-    export DATABASE_URL="postgresql://ziran@localhost:5432/gradcafe"
+    export DATABASE_URL="postgresql://<your_username>@localhost:5432/gradcafe"
+
+    Use the same username you created in Step B
 
     Step D — Verify database connection
 
@@ -92,9 +96,43 @@ Setup Instructions
 
     This confirms the database is configured correctly.
 
+    **If database is already populated (optional)
+
+    If the gradcafe database already exists and the applicants table contains data, you do not need to run the loader again.
+
+    You can verify this with:
+
+    psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
+
+    If the query returns a non-zero row count, the database is already populated.
+
+    In that case, skip Step E and proceed directly to Step 4 (running the application)
+    
+    Step E - Populate the database (with table applicants)
+
+    After confirming the database connection, run the ETL loader to create tables and insert applicant data:
+
+    python src/load_data.py
+
+    The loader will:
+
+    • Create the `applicants` table if it does not exist
+    • Insert cleaned applicant records
+    • Skip duplicates safely
+
+    You should see output indicating rows were inserted.
+
+    Verify data loaded successfully:
+
+    psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
+
+    A non-zero row count confirms the database is populated.
+
+
 Environment Variable Reminder (Important)
 
-    Environment variables do not persist when you open a new terminal session. If you close Terminal and reopen it, you must re-export the database connection string.
+    Environment variables do not persist when you open a new terminal session. If you close Terminal and reopen it, 
+    you must re-export the database connection string.
 
     Verify the variable is set:
 
@@ -102,7 +140,7 @@ Environment Variable Reminder (Important)
 
     If nothing prints, re-export it:
 
-    export DATABASE_URL=“postgresql://ziran@localhost:5432/gradcafe”
+    export DATABASE_URL="postgresql://<your_username>@localhost:5432/gradcafe"
 
     You can confirm the database connection with:
 
@@ -200,9 +238,7 @@ Documentation includes:
 • Testing guide
 • Operational Notes (busy-state policy, idempotency, troubleshooting)
 
-Published documentation:
-
-https://gradcafe-ziran.readthedocs.io/en/latest/
+Published documentation (RTD with link below)
 
 ---
 
