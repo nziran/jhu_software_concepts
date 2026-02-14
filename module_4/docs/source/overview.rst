@@ -17,23 +17,15 @@ The system supports:
 Environment Requirements
 ------------------------
 
-The application connects to PostgreSQL using environment variables.
+This application connects to PostgreSQL using the DATABASE_URL environment variable.
 
-Preferred (CI / portable):
+Required:
+DATABASE_URL=postgresql://@localhost:5432/gradcafe
 
-::
-
-   DATABASE_URL=postgresql://user:password@host:port/database
-
-Fallback variables (local development):
-
-::
-
-   PGDATABASE=gradcafe
-   PGUSER=ziran
-   PGPASSWORD=your_password
-   PGHOST=localhost
-   PGPORT=5432
+Notes:
+	•	Local PostgreSQL authentication uses OS-based trust (no password required).
+	•	This project does not use PGDATABASE, PGUSER, or other fallback variables.
+	•	If DATABASE_URL is not set, the application will fail to connect.
 
 Running the Application
 -----------------------
