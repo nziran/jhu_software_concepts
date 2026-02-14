@@ -276,7 +276,9 @@ Documentation includes:
 • Testing guide
 • Operational Notes (busy-state policy, idempotency, troubleshooting)
 
-Published documentation (RTD with link below)
+Published documentation online:
+
+    https://gradcafe-ziran.readthedocs.io/en/latest/
 
 ---
 
