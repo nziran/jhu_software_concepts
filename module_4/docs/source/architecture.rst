@@ -51,7 +51,7 @@ Query/Analysis Layer
 
 Responsibilities:
 
-- Connects to Postgres using ``DATABASE_URL`` (preferred) or fallback env vars
+- Connects to Postgres using ``DATABASE_URL`` environment variable
 - Executes SQL queries against ``applicants``
 - Returns analysis results as "analysis cards" used by the web layer:
 
