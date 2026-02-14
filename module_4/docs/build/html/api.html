@@ -177,54 +177,26 @@ overlapping update requests.</p>
 </section>
 <section id="module-src.load_data">
 <span id="data-loading"></span><h2>Data Loading<a class="headerlink" href="#module-src.load_data" title="Link to this heading"></a></h2>
-<p>load_py.py</p>
+<p>load_data.py</p>
 <p>Loads cleaned/extended GradCafe applicant entries from a JSON file and inserts them into a
 PostgreSQL table named <cite>applicants</cite>. Uses an “upsert-like” strategy: insert new rows and
 silently skip duplicates based on <cite>url</cite> (unique constraint).</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="src.load_data.main">
 <span class="sig-prename descclassname"><span class="pre">src.load_data.</span></span><span class="sig-name descname"><span class="pre">main</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#src.load_data.main" title="Link to this definition"></a></dt>
-<dd><dl class="simple">
-<dt>Main ETL routine:</dt><dd><ol class="arabic simple">
-<li><p>Verify input JSON exists</p></li>
-<li><p>Load JSON into memory (expects a list of dicts)</p></li>
-<li><p>Connect to Postgres</p></li>
-<li><p>Create table <cite>applicants</cite> if missing</p></li>
-<li><p>Insert entries, skipping duplicates by url</p></li>
-<li><p>Commit and report how many new rows were inserted</p></li>
-</ol>
-</dd>
-</dl>
+<dd><p>Main ETL routine: load JSON -&gt; create table -&gt; insert rows (skip dupes) -&gt; commit.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="src.load_data.parse_date">
 <span class="sig-prename descclassname"><span class="pre">src.load_data.</span></span><span class="sig-name descname"><span class="pre">parse_date</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">date_str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.load_data.parse_date" title="Link to this definition"></a></dt>
-<dd><p>Convert a YYYY-MM-DD string into a Python <cite>date</cite> object.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><ul class="simple">
-<li><p>a <cite>datetime.date</cite> if parsing succeeds</p></li>
-<li><p>None if the input is missing/empty or has an unexpected format</p></li>
-</ul>
-</p>
-</dd>
-</dl>
+<dd><p>Convert a YYYY-MM-DD string into a datetime.date, or return None if invalid.</p>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="src.load_data.safe_float">
 <span class="sig-prename descclassname"><span class="pre">src.load_data.</span></span><span class="sig-name descname"><span class="pre">safe_float</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">x</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#src.load_data.safe_float" title="Link to this definition"></a></dt>
-<dd><p>Best-effort conversion of a value to float.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><ul class="simple">
-<li><p>float(x) when possible</p></li>
-<li><p>None if x is None/empty or cannot be converted</p></li>
-</ul>
-</p>
-</dd>
-</dl>
+<dd><p>Best-effort conversion to float; returns None if missing/invalid.</p>
 </dd></dl>
 
 </section>
