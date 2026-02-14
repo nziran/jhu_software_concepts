@@ -68,6 +68,9 @@ If the app runs but connects to the wrong database:
 •	Re-export DATABASE_URL (shown above)
 •	Restart Flask in the same terminal
 
+Syntax setup errors
+~~~~~~~~~~~~~~~~~~~
+
 During Setup, when copying commands from README.txt, 
 some systems automatically replace straight quotes with curly quotes.
 
@@ -93,15 +96,21 @@ If the UI appears locked:
 
 The job_running flag resets automatically after failures.
 
+Environment variable not set
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 If scraping completes but database row counts do not change:
 
-•	Verify cleaned_applicant_data_update.json was created
-•	Run clean_update.py manually to confirm output
-•	Ensure DATABASE_URL was exported before starting Flask:
+Check row count before and after pull:
 
-    export DATABASE_URL="postgresql://user@localhost:5432/gradcafe"
+    psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
 
+If the count does not increase:
+• Verify cleaned_applicant_data_update.json was created
+• Run clean_update.py manually to confirm output
+• Ensure DATABASE_URL was exported before starting Flask:
 
+  export DATABASE_URL="postgresql://user@localhost:5432/gradcafe"
 
 CI failures
 ~~~~~~~~~~~
