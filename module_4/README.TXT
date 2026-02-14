@@ -257,16 +257,16 @@ Sphinx Documentation
 
 Documentation source:
 
-module_4/docs/
+    module_4/docs/
 
 Build locally:
 
-cd docs
-make html
+    cd docs
+    make html
 
 Open:
 
-docs/build/html/index.html
+    docs/build/html/index.html
 
 Documentation includes:
 
