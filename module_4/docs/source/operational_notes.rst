@@ -61,7 +61,7 @@ If the app or tests fail to connect:
 
 Example:
 
-export DATABASE_URL="postgresql://user@localhost:5432/gradcafe"
+export DATABASE_URL="postgresql://<user>@localhost:5432/gradcafe"
 
 If the app runs but connects to the wrong database:
 
@@ -111,7 +111,7 @@ If the count does not increase:
 • Run clean_update.py manually to confirm output
 • Ensure DATABASE_URL was exported before starting Flask:
 
-  export DATABASE_URL="postgresql://user@localhost:5432/gradcafe"
+  export DATABASE_URL="postgresql://<user>@localhost:5432/gradcafe"
 
 CI failures
 ~~~~~~~~~~~
