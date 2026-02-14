@@ -63,6 +63,25 @@ Example:
 
 export DATABASE_URL="postgresql://user@localhost:5432/gradcafe"
 
+If the app runs but connects to the wrong database:
+
+•	Re-export DATABASE_URL (shown above)
+•	Restart Flask in the same terminal
+
+During Setup, when copying commands from README.txt, 
+some systems automatically replace straight quotes with curly quotes.
+
+This causes errors such as:
+
+•	invalid character
+•	no matches found
+•	command not found
+
+Fix:
+
+•	Delete the pasted command
+•	Retype it manually using plain ASCII quotes ( ’ and “ )
+
 
 Busy-state stuck
 ~~~~~~~~~~~~~~~~
@@ -73,6 +92,15 @@ If the UI appears locked:
 • Restart the Flask server
 
 The job_running flag resets automatically after failures.
+
+If scraping completes but database row counts do not change:
+
+•	Verify cleaned_applicant_data_update.json was created
+•	Run clean_update.py manually to confirm output
+•	Ensure DATABASE_URL was exported before starting Flask:
+
+    export DATABASE_URL="postgresql://user@localhost:5432/gradcafe"
+
 
 
 CI failures
