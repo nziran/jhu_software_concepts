@@ -34,22 +34,24 @@ Environment Requirements
 
 Environment variable required:
 
-DATABASE_URL — PostgreSQL connection string
+    DATABASE_URL — PostgreSQL connection string
 
 Example:
 
-postgresql://user:password@localhost:5432/gradcafe
+    postgresql://user:password@localhost:5432/gradcafe
 
 ---
 
-Setup Instructions (assuming fresh install with no gradcafe db and no applicants table)
+Setup Instructions
 
-1. Create and activate virtual environment
+1. Create and activate virtual environment in the module_4 directory
 
     python -m venv .venv
     source .venv/bin/activate
 
 2. Install dependencies
+
+    * All commands below must be run from the module_4 directory with the virtual environment activated.
 
     pip install -r requirements.txt
 
@@ -59,92 +61,128 @@ Setup Instructions (assuming fresh install with no gradcafe db and no applicants
 
     Step A — Ensure PostgreSQL is running
 
-    Run:
+        Run:
 
-    pg_isready
+        pg_isready
 
-    You should see:
+        You should see:
 
-    accepting connections
+        accepting connections
 
-    Step B — Create database and user (local example)
+    Step B — Create user and database
 
-    Run:
+        Run:
 
-    createuser <your_username>
-    createdb -O <your_username> gradcafe
+        createuser <your_username>
+        createdb -O <your_username> gradcafe
 
-    Replace <your_username> with your local PostgreSQL username.
+        * if gradcafe already exists, user may see ERROR:  database "gradcafe" already exists
+
+        Replace <your_username> with your local PostgreSQL username (case-sensitive)
 
     Step C — Set environment variable
 
-    Run:
+        Run:
 
-    export DATABASE_URL="postgresql://<your_username>@localhost:5432/gradcafe"
+        export DATABASE_URL="postgresql://<your_username>@localhost:5432/gradcafe"
 
-    Use the same username you created in Step B
+        Use the same username you created in Step B
 
     Step D — Verify database connection
 
-    Run:
+        Run:
 
-    python -c “import os, psycopg; psycopg.connect(os.environ[‘DATABASE_URL’]).close(); print(‘DB connect OK’)”
+        python -c "import os, psycopg; psycopg.connect(os.environ[‘DATABASE_URL’]).close(); print(‘DB connect OK’)"
 
-    If successful, you should see:
+        * Note: If you copy-paste this command and get a syntax error, retype it manually — some editors auto-convert 
+        quotes to curly quotes, which Python does not accept.
 
-    DB connect OK
+        If successful, you should see:
 
-    This confirms the database is configured correctly.
+        DB connect OK
 
-    **If database is already populated (optional)
+        This confirms PostgreSQL is reachable and credentials are valid.
 
-    If the gradcafe database already exists and the applicants table contains data, you do not need to run the loader again.
+    Step E - 
 
-    You can verify this with:
+⸻
 
-    psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
+            Option A — Fresh database
 
-    If the query returns a non-zero row count, the database is already populated.
+            If the database gradcafe is new (fresh), then continue to Step 3F to load data into it.
 
-    In that case, skip Step E and proceed directly to Step 4 (running the application)
-    
-    Step E - Populate the database (with table applicants)
+⸻
 
-    After confirming the database connection, run the ETL loader to create tables and insert applicant data:
+            Option B — Database already exists
 
-    python src/load_data.py
+            If gradcafe already exists and was created by a different user, you may see:
 
-    The loader will:
+            permission denied for table applicants
 
-    • Create the `applicants` table if it does not exist
-    • Insert cleaned applicant records
-    • Skip duplicates safely
+            Fix this by granting permissions once (run as DB owner or superuser):
 
-    You should see output indicating rows were inserted.
+            psql -d gradcafe -c “GRANT CONNECT ON DATABASE gradcafe TO <your_username>; 
+            GRANT USAGE ON SCHEMA public TO <your_username>; GRANT SELECT,INSERT,UPDATE,
+            DELETE ON ALL TABLES IN SCHEMA public TO <your_username>; GRANT ALL ON ALL 
+            SEQUENCES IN SCHEMA public TO <your_username>; ALTER DEFAULT PRIVILEGES IN 
+            SCHEMA public GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO <your_username>; 
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO <your_username>;”
 
-    Verify data loaded successfully:
+             * Note: If you copy-paste this command and get a syntax error, retype it manually — 
+             some editors auto-convert quotes to curly quotes, which Python does not accept.
 
-    psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
+            After this, proceed normally.
 
-    A non-zero row count confirms the database is populated.
+⸻
+
+            If gradcafe exists and is already populated, user can 
+            check whether data already exists:
+
+                psql “$DATABASE_URL” -c “SELECT COUNT(*) FROM applicants;”
+
+             * Note: If you copy-paste this command and get a syntax error, retype it manually — 
+             some editors auto-convert quotes to curly quotes, which Python does not accept.
+
+            If the count is non-zero, skip Step 3F since data has already been loaded into it and 
+            user can go directly to Step 4 (Run the application).
+
+⸻
+
+Step F — Populate the database (create applicants table)
+
+If the database is empty, run:
+
+python src/load_data.py
+
+The loader will:
+
+• Create the applicants table if missing
+• Insert cleaned applicant records
+• Safely skip duplicates
+
+Verify success:
+
+    psql “$DATABASE_URL” -c “SELECT COUNT(*) FROM applicants;”
+
+A non-zero count confirms successful population.
 
 
 Environment Variable Reminder (Important)
 
     Environment variables do not persist when you open a new terminal session. If you close Terminal and reopen it, 
-    you must re-export the database connection string.
+    you must re-export the database connection string.  The db connection string tells the app which database to use.
 
     Verify the variable is set:
 
-    echo $DATABASE_URL
+        echo $DATABASE_URL
 
     If nothing prints, re-export it:
 
-    export DATABASE_URL="postgresql://<your_username>@localhost:5432/gradcafe"
+        export DATABASE_URL="postgresql://<your_username>@localhost:5432/gradcafe"
 
     You can confirm the database connection with:
 
-    psql “$DATABASE_URL” -c “SELECT COUNT(*) FROM applicants;”
+        psql “$DATABASE_URL” -c “SELECT COUNT(*) FROM applicants;”
 
     If successful, PostgreSQL will return a row count. This confirms the database is reachable and correctly configured.
 
