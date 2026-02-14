@@ -63,7 +63,7 @@ Example:
 
 ::
 
-export DATABASE_URL="postgresql://<user>@localhost:5432/gradcafe"
+  export DATABASE_URL="postgresql://<user>@localhost:5432/gradcafe"
 
 If the app runs but connects to the wrong database:
 
@@ -107,7 +107,7 @@ Check row count before and after pull:
 
 ::
 
-    psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
+  psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
 
 If the count does not increase:
 
@@ -132,7 +132,7 @@ Run locally:
 
 ::
   
-pytest -m "web or buttons or analysis or db or integration"
+  pytest -m "web or buttons or analysis or db or integration"
 
 
 Missing dependencies
@@ -140,7 +140,9 @@ Missing dependencies
 
 If imports fail:
 
-pip install -r requirements.txt
+::
+
+  pip install -r requirements.txt
 
 
 Documentation build issues
@@ -148,9 +150,11 @@ Documentation build issues
 
 Rebuild Sphinx docs:
 
-cd docs
-make clean
-make html
+::
+
+  cd docs
+  make clean
+  make html
 
 Open:
 
