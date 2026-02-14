@@ -106,6 +106,7 @@ Check row count before and after pull:
     psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
 
 If the count does not increase:
+
 • Verify cleaned_applicant_data_update.json was created
 • Run clean_update.py manually to confirm output
 • Ensure DATABASE_URL was exported before starting Flask:
