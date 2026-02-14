@@ -202,3 +202,13 @@ def test_missing_json_path_raises(monkeypatch):
     # Reload module so CLEANED_JSON_PATH logic re-runs
     with pytest.raises(FileNotFoundError):
         importlib.reload(load_data)
+        
+@pytest.mark.db
+def test_db_params_fallback(monkeypatch):
+    from src.load_data import _db_params
+
+    monkeypatch.delenv("DATABASE_URL", raising=False)
+    params = _db_params()
+
+    assert isinstance(params, dict)
+    assert "dbname" in params
