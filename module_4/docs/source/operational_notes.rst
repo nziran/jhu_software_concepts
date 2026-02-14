@@ -61,6 +61,8 @@ If the app or tests fail to connect:
 
 Example:
 
+::
+
 export DATABASE_URL="postgresql://<user>@localhost:5432/gradcafe"
 
 If the app runs but connects to the wrong database:
@@ -103,6 +105,8 @@ If scraping completes but database row counts do not change:
 
 Check row count before and after pull:
 
+::
+
     psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
 
 If the count does not increase:
@@ -110,6 +114,8 @@ If the count does not increase:
 • Verify cleaned_applicant_data_update.json was created
 • Run clean_update.py manually to confirm output
 • Ensure DATABASE_URL was exported before starting Flask:
+
+::
 
   export DATABASE_URL="postgresql://<user>@localhost:5432/gradcafe"
 
@@ -124,6 +130,8 @@ If GitHub Actions fails:
 
 Run locally:
 
+::
+  
 pytest -m "web or buttons or analysis or db or integration"
 
 
