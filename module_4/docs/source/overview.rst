@@ -20,7 +20,8 @@ Environment Requirements
 This application connects to PostgreSQL using the DATABASE_URL environment variable.
 
 Required:
-DATABASE_URL=postgresql://@localhost:5432/gradcafe
+
+   DATABASE_URL=postgresql://<user>@localhost:5432/gradcafe
 
 Notes:
 	•	Local PostgreSQL authentication uses OS-based trust (no password required).
@@ -30,7 +31,7 @@ Notes:
 Running the Application
 -----------------------
 
-From the module_4 directory:
+From the module_4 directory with the DATABASE_URL set:
 
 ::
 

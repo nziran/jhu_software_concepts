@@ -52,7 +52,8 @@ Required selectors:
 Test doubles / dependency injection
 -----------------------------------
 
-This project avoids live network calls during tests.
+This project avoids live network calls during tests. This ensures tests do not depend on 
+external network availability or live GradCafe state
 
 In tests, the ETL pipeline functions (scrape/load/update) are replaced with
 fakes/mocks so that:

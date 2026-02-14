@@ -10,7 +10,7 @@ corruption and duplicate writes.
 When a pull operation is running:
 
 • Additional POST /pull-data requests return HTTP 409 with {"busy": true}
-• POST /update-analysis is blocked until the pull completes
+• POST /update-analysis returns HTTP 409 with {“busy”: true} until the pull completes
 
 A global lock and job_running flag enforce this policy. The flag resets
 even if a pipeline error occurs, ensuring the UI never becomes permanently

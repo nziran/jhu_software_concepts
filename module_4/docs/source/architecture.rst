@@ -31,7 +31,7 @@ Typical responsibilities:
 
 - Pull/scrape data (tests must not depend on live internet)
 - Clean/normalize the scraped data into a consistent schema
-- Load/insert records into PostgreSQL (idempotent behavior enforced via uniqueness)
+- Load/insert records into PostgreSQL (idempotency enforced via database uniqueness constraints and loader logic)
 
 Database Layer
 --------------
