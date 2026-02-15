@@ -76,9 +76,9 @@ Setup Instructions
         createuser <your_username>
         createdb -O <your_username> gradcafe
 
-        * if user or gradcafe already exists, user may see ERROR:  user (or gradcafe) already exists
+        * Replace <your_username> with your local PostgreSQL username (case-sensitive)
 
-        Replace <your_username> with your local PostgreSQL username (case-sensitive)
+        * if user or gradcafe already exists, user may see ERROR:  user (or gradcafe) already exists
 
     Step C — Set environment variable
 
