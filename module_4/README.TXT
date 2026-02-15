@@ -38,7 +38,7 @@ Environment variable required:
 
 Example:
 
-    postgresql://user:password@localhost:5432/gradcafe
+    postgresql://username@localhost:5432/gradcafe
 
 ---
 
@@ -46,7 +46,7 @@ Setup Instructions
 
 1. Create and activate virtual environment in the module_4 directory
 
-    python -m venv .venv
+    python3 -m venv .venv
     source .venv/bin/activate
 
 2. Install dependencies
@@ -76,7 +76,7 @@ Setup Instructions
         createuser <your_username>
         createdb -O <your_username> gradcafe
 
-        * if gradcafe already exists, user may see ERROR:  database "gradcafe" already exists
+        * if user or gradcafe already exists, user may see ERROR:  user (or gradcafe) already exists
 
         Replace <your_username> with your local PostgreSQL username (case-sensitive)
 
@@ -92,10 +92,12 @@ Setup Instructions
 
         Run:
 
-        python -c "import os, psycopg; psycopg.connect(os.environ[‘DATABASE_URL’]).close(); print(‘DB connect OK’)"
+        python -c "import os, psycopg; psycopg.connect(os.environ['DATABASE_URL']).close(); print('DB connect OK')"
 
         * Note: If you copy-paste this command and get a syntax error, retype it manually — some editors auto-convert 
         quotes to curly quotes, which Python does not accept.
+    
+        * Note: If using MacOS, ensure System Settings-->Keyboard-->Text Input-->Input Sources (Edit..)-->Use smart quotes and dashes is OFF
 
         If successful, you should see:
 
@@ -115,36 +117,28 @@ Setup Instructions
 
             Option B — Database already exists
 
-            If gradcafe already exists and was created by a different user, you may see:
-
-            permission denied for table applicants
-
-            Fix this by granting permissions once (run as DB owner or superuser):
-
-            psql -d gradcafe -c “GRANT CONNECT ON DATABASE gradcafe TO <your_username>; 
-            GRANT USAGE ON SCHEMA public TO <your_username>; GRANT SELECT,INSERT,UPDATE,
-            DELETE ON ALL TABLES IN SCHEMA public TO <your_username>; GRANT ALL ON ALL 
-            SEQUENCES IN SCHEMA public TO <your_username>; ALTER DEFAULT PRIVILEGES IN 
-            SCHEMA public GRANT SELECT,INSERT,UPDATE,DELETE ON TABLES TO <your_username>; 
-            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO <your_username>;”
-
-             * Note: If you copy-paste this command and get a syntax error, retype it manually — 
-             some editors auto-convert quotes to curly quotes, which Python does not accept.
-
-            After this, proceed normally.
-
-⸻
-
             If gradcafe exists and is already populated, user can 
             check whether data already exists:
 
-                psql “$DATABASE_URL” -c “SELECT COUNT(*) FROM applicants;”
-
-             * Note: If you copy-paste this command and get a syntax error, retype it manually — 
-             some editors auto-convert quotes to curly quotes, which Python does not accept.
+                psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
 
             If the count is non-zero, skip Step 3F since data has already been loaded into it and 
             user can go directly to Step 4 (Run the application).
+
+            If gradcafe already exists and was created by a different user, you may see:
+
+                permission denied for table applicants
+
+            Fix this by granting permissions once (run as DB owner or superuser):
+
+            psql -d gradcafe -c "GRANT CONNECT ON DATABASE gradcafe TO <your_username>;
+            GRANT USAGE, CREATE ON SCHEMA public TO <your_username>;
+            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <your_username>;
+            GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO <your_username>;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO <your_username>;
+            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO <your_username>;"
+
+            After this, proceed normally.
 
 ⸻
 
@@ -162,7 +156,7 @@ The loader will:
 
 Verify success:
 
-    psql “$DATABASE_URL” -c “SELECT COUNT(*) FROM applicants;”
+    psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
 
 A non-zero count confirms successful population.
 
@@ -182,7 +176,7 @@ Environment Variable Reminder (Important)
 
     You can confirm the database connection with:
 
-        psql “$DATABASE_URL” -c “SELECT COUNT(*) FROM applicants;”
+        psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
 
     If successful, PostgreSQL will return a row count. This confirms the database is reachable and correctly configured.
 
@@ -199,7 +193,7 @@ Environment Variable Reminder (Important)
 
 Running tests (marker policy check):
 
-    pytest -m “web or buttons or analysis or db or integration”
+    pytest -m "web or buttons or analysis or db or integration"
 
     Runs the full marked suite and verifies that all tests are properly marked according to assignment policy.
 

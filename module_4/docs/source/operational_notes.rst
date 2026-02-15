@@ -85,7 +85,8 @@ This causes errors such as:
 Fix:
 
 •	Delete the pasted command
-•	Retype it manually using plain ASCII quotes ( ’ and “ )
+•	Retype it manually using plain ASCII quotes ( ' and " )
+• If using MacOS, ensure System Settings-->Keyboard-->Text Input-->Input Sources (Edit..)-->Use smart quotes and dashes is OFF
 
 
 Busy-state stuck
