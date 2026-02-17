@@ -54,7 +54,7 @@ def safe_float(x):
         if x is None or x == "":
             return None
         return float(x)
-    except Exception:
+    except (ValueError, TypeError):
         return None
 
 
@@ -68,13 +68,13 @@ def _db_params():
     if db_url:
         return db_url
 
-    return dict(
-        dbname=os.getenv("PGDATABASE", DB_NAME),
-        user=os.getenv("PGUSER", DB_USER),
-        password=os.getenv("PGPASSWORD"),
-        host=os.getenv("PGHOST", DB_HOST),
-        port=int(os.getenv("PGPORT", str(DB_PORT))),
-    )
+    return {
+        "dbname": os.getenv("PGDATABASE", DB_NAME),
+        "user": os.getenv("PGUSER", DB_USER),
+        "password": os.getenv("PGPASSWORD"),
+        "host": os.getenv("PGHOST", DB_HOST),
+        "port": int(os.getenv("PGPORT", str(DB_PORT))),
+    }
 
 
 def main():

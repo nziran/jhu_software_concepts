@@ -1,11 +1,16 @@
-# load_update.py
-# Loads cleaned update records into PostgreSQL, inserting only new rows.
+"""
+Load cleaned applicant update records into Postgres.
+
+This module reads the cleaned update JSON, inserts new rows safely, and supports
+idempotent re-runs for the ETL pipeline.
+"""
 
 import json
-from pathlib import Path
-from datetime import datetime
-import psycopg
 import os
+from datetime import datetime
+from pathlib import Path
+
+import psycopg
 
 # Database connection configuration
 DB_NAME = "gradcafe"
@@ -39,7 +44,7 @@ def safe_float(x):
         if x is None or x == "":
             return None
         return float(x)
-    except Exception:
+    except (TypeError, ValueError):
         return None
 
 
@@ -130,9 +135,7 @@ def main():
                     inserted += 1
 
         conn.commit()
-
     print(f"✅ Inserted {inserted} new rows into applicants.")
 
-
-if __name__ == "__main__":  
-    main() 
+if __name__ == "__main__":
+    main()

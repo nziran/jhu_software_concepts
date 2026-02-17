@@ -10,7 +10,13 @@
 # - Infer missing start term/year from contextual text when possible
 # - Guarantee a stable output schema
 #
-# The cleaned data is written to a new JSON file so raw data is preserved.
+"""
+Normalize raw scraped GradCafe applicant records into a consistent schema.
+
+This module cleans and standardizes fields, converts invalid values to None,
+infers missing term/year when possible, and writes cleaned output to JSON so the
+raw scrape is preserved.
+"""
 
 import json
 import re
@@ -137,7 +143,10 @@ def _extract_start_term_year(*texts: str | None) -> tuple[str | None, str | None
         return None, None
 
     # Only search if enrollment context is present
-    ctx_pat = r"(start|starting|begins?|beginning|program begins|term|semester|matriculat|enroll|enrollment|cohort)"
+    ctx_pat = (
+    r"(start|starting|begins?|beginning|program begins|term|semester|"
+    r"matriculat|enroll|enrollment|cohort)"
+    )
     if not re.search(ctx_pat, hay, flags=re.I):
         return None, None
 
@@ -149,7 +158,10 @@ def _extract_start_term_year(*texts: str | None) -> tuple[str | None, str | None
         return _TERM_ALIASES.get(season), year
 
     # Month + year pattern fallback
-    month_pat = r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    month_pat = (
+    r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|"
+    r"aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    )
     my = re.search(rf"\b{month_pat}\b\W*(20\d{{2}})\b", hay, flags=re.I)
     if my:
         month = my.group(1).lower()
@@ -168,7 +180,7 @@ def clean_data(records: list[dict]) -> list[dict]:
 
     Each record is cleaned, standardized, and validated against a fixed schema.
     """
-    cleaned: list[dict] = []
+    cleaned_rows: list[dict] = []
 
     # Stable output schema guarantees downstream compatibility
     required_keys = [
@@ -207,7 +219,7 @@ def clean_data(records: list[dict]) -> list[dict]:
         degree = _normalize_none(r.get("degree"))
 
         gpa_raw = r.get("gpa") if "gpa" in r else r.get("GPA")
-        GPA = _normalize_none(gpa_raw)
+        gpa = _normalize_none(gpa_raw)
 
         source_url = _normalize_none(r.get("source_url"))
         scraped_at = _normalize_none(r.get("scraped_at"))
@@ -242,7 +254,7 @@ def clean_data(records: list[dict]) -> list[dict]:
             "gre_aw": gre_aw,
             "degree_level": degree_level,
             "degree": degree,
-            "GPA": GPA,
+            "GPA": gpa,
             "source_url": source_url,
             "scraped_at": scraped_at,
         }
@@ -251,9 +263,9 @@ def clean_data(records: list[dict]) -> list[dict]:
         for k in required_keys:
             out.setdefault(k, None)
 
-        cleaned.append(out)
+        cleaned_rows.append(out)
 
-    return cleaned
+    return cleaned_rows
 
 
 # -------------------------------------------------------------------
@@ -289,7 +301,7 @@ def load_data(path: str = INPUT_JSON) -> list[dict]:
 # Script entry point
 # -------------------------------------------------------------------
 if __name__ == "__main__":
-    data = load_data(INPUT_JSON)
-    cleaned = clean_data(data)
-    save_data(cleaned, OUTPUT_JSON)
-    print(f"Cleaned {len(cleaned)} records -> {OUTPUT_JSON}")
+    raw_data = load_data(INPUT_JSON)
+    cleaned_output = clean_data(raw_data)
+    save_data(cleaned_output, OUTPUT_JSON)
+    print(f"Cleaned {len(cleaned_output)} records -> {OUTPUT_JSON}")
