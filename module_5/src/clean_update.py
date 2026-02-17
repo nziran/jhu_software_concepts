@@ -100,30 +100,29 @@ def _normalize_none(x):
 def _normalize_us_international(v):
     """
     Convert raw international indicators into consistent labels.
-
-    Output values:
-      "International"
-      "American"
-      None
+    Outputs:
+      "International", "American", or None
+    Consolidated to a single return statement to satisfy R0911.
     """
+    result = None
+
     if v in (True, False, None):
         if v is True:
-            return "International"
-        if v is False:
-            return "American"
-        return None
-
-    if isinstance(v, str):
+            result = "International"
+        elif v is False:
+            result = "American"
+        else:
+            result = None
+    elif isinstance(v, str):
         t = v.strip().lower()
-
         if t == "true":
-            return "International"
-        if t == "false":
-            return "American"
-        if t in ("international", "american"):
-            return t.title()
+            result = "International"
+        elif t == "false":
+            result = "American"
+        elif t in ("international", "american"):
+            result = t.title()
 
-    return None
+    return result
 
 
 # -------------------------------------------------------------------
@@ -132,49 +131,42 @@ def _normalize_us_international(v):
 def _extract_start_term_year(*texts: str | None) -> tuple[str | None, str | None]:
     """
     Attempt to infer an applicant's start term/year from surrounding text.
-
-    Only activates when start-related context is detected to avoid false
-    matches from unrelated mentions.
+    Consolidated to a single return to satisfy pylint R0911.
     """
     hay = " ".join(t for t in (texts or []) if t)
     hay = _clean_text(hay)
 
-    if not hay:
-        return None, None
-
-    # Only search if enrollment context is present
     ctx_pat = (
-    r"(start|starting|begins?|beginning|program begins|term|semester|"
-    r"matriculat|enroll|enrollment|cohort)"
+        r"(start|starting|begins?|beginning|program begins|term|semester|"
+        r"matriculat|enroll|enrollment|cohort)"
     )
-    if not re.search(ctx_pat, hay, flags=re.I):
-        return None, None
 
-    # Season + year pattern
-    m = re.search(r"\b(spring|summer|fall|autumn|winter)\b\W*(20\d{2})\b", hay, flags=re.I)
-    if m:
-        season = m.group(1).lower()
-        year = m.group(2)
-        return _TERM_ALIASES.get(season), year
-
-    # Month + year pattern fallback
     month_pat = (
-    r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|"
-    r"aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+        r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|"
+        r"aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
     )
-    my = re.search(rf"\b{month_pat}\b\W*(20\d{{2}})\b", hay, flags=re.I)
-    if my:
-        month = my.group(1).lower()
-        year = my.group(2)
-        return _MONTH_TO_TERM.get(month), year
 
-    return None, None
+    term, year = None, None
 
+    if hay and re.search(ctx_pat, hay, flags=re.I):
+        # Season + year pattern
+        m = re.search(r"\b(spring|summer|fall|autumn|winter)\b\W*(20\d{2})\b", hay, flags=re.I)
+        if m:
+            season = m.group(1).lower()
+            term, year = _TERM_ALIASES.get(season), m.group(2)
+        else:
+            # Month + year pattern fallback
+            my = re.search(rf"\b{month_pat}\b\W*(20\d{{2}})\b", hay, flags=re.I)
+            if my:
+                month = my.group(1).lower()
+                term, year = _MONTH_TO_TERM.get(month), my.group(2)
+
+    return term, year
 
 # -------------------------------------------------------------------
 # Core cleaning pipeline
 # -------------------------------------------------------------------
-def clean_data(records: list[dict]) -> list[dict]:
+def clean_data(records: list[dict]) -> list[dict]:  # pylint: disable=too-many-locals
     """
     Transform raw scraped records into normalized output rows.
 

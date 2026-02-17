@@ -328,6 +328,42 @@ Pylint Usage
 This command ensures that pylint is run inside the venv.  
 All files in module 5 were tested, however the src folder was linted first.
 
+Exceptions
+
+clean_update.py:
+- _extract_start_term_year: disabled R0911 (too-many-return-statements) — multiple early exits, logical.
+- clean_data: disabled R0914 (too-many-locals) — long list of variables needed for schema normalization.
+
+scrape_update.py:
+- scrape_data: disabled R0914 (too-many-locals) — function legitimately manages many temporary variables.
+- scrape_data: disabled R0912 (too-many-branches) — multiple control branches for error handling and logic.
+- scrape_data: disabled R0915 (too-many-statements) — long pipeline, combining scraping, filtering, and futures processing.
+
+load_data.py:
+- safe_float: disabled R0801 (duplicate-code) — common small utility also appears in load_update.py.
+- _db_params / db_url return: disabled R0801 (duplicate-code) — same pattern appears in query_data.py.
+
+app.py:
+	•	analysis_cache / analysis_last_updated: disabled C0103 (invalid-name) — global cache/timestamp variables used by Flask routes; renaming would complicate code unnecessarily.
+	•	job_running / job_last_message: disabled C0103 (invalid-name) — global state variables tracking background update; renaming not practical.
+	•	run_update_pipeline, analysis, pull_data, update_analysis: disabled W0603 / W0602 (global-statement / global-variable-not-assigned) — globals are intentionally read/modified for background thread and cached state; required for thread-safe UI logic.
+	•	run_update_pipeline: disabled W0718 (broad-exception-caught) — catches general exceptions to prevent background thread from crashing the Flask server.
+	•	Imports: disabled C0411 (wrong-import-order) — standard library imports intentionally grouped for clarity and readability.
+
+
+query_data.py:
+	•	get_analysis_cards: disabled R1735 (use-dict-literal) — returning dicts for DB connection parameters; literal dict alternative is stylistic, not functionally necessary.
+	•	get_analysis_cards: disabled too-many-locals — multiple temporary variables needed to fetch, calculate, and format all analysis card queries; splitting would reduce readability and complicate flow.
+	•	get_analysis_cards: disabled duplicate-code — small repeated patterns exist in load_data.py and load_update.py; intentional for consistency.
+	•	Final newline missing (C0304) — cosmetic, does not affect runtime.
+	•	Long SQL query lines (C0301) — line wrapping would reduce readability for multi-line SQL; left as-is for clarity in queries.
+
+load_update.py:
+	•	safe_float / _date_parse functions: disabled R0801 (duplicate-code) — same small utilities appear in load_data.py.
+	•	Final newline missing (C0304) — purely cosmetic, no runtime effect.
+	•	Catching general exceptions (W0718) — these are utility wrappers around DB insert/commit; specific exception handling is unnecessary because failures are logged and returned upstream.
+
+
 Author
 Navid Ziran
 2026

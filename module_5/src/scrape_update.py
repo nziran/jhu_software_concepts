@@ -6,6 +6,8 @@ the DB for already-seen URLs, and saves the update dataset for the clean/load
 pipeline.
 """
 
+# pylint: disable=too-many-locals
+
 import json
 import os
 import re
@@ -441,7 +443,7 @@ def load_data(path: str = UPDATE_OUTPUT_JSON) -> list[dict]:
 # -----------------------------
 # Parallel detail fetch for a subset of records
 # -----------------------------
-def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple[int, int]:
+def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple[int, int]:  # pylint: disable=too-many-locals
     """
     Fetch /result/<id> detail pages in parallel for only the specified record indices.
 
@@ -508,7 +510,7 @@ def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple
 # -----------------------------
 # Main scrape pipeline (pull NEW rows only)
 # -----------------------------
-def scrape_data(_resume: bool = True) -> None:
+def scrape_data(_resume: bool = True) -> None:   # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     """
     Scrape survey pages from newest to older, collecting only entries that are
     not already present in Postgres. Optionally fetch detail pages in chunks.

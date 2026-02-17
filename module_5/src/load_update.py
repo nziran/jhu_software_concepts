@@ -4,6 +4,7 @@ Load cleaned applicant update records into Postgres.
 This module reads the cleaned update JSON, inserts new rows safely, and supports
 idempotent re-runs for the ETL pipeline.
 """
+# pylint: disable=duplicate-code
 
 import json
 import os

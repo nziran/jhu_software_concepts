@@ -5,6 +5,7 @@ Loads cleaned/extended GradCafe applicant entries from a JSON file and inserts t
 PostgreSQL table named `applicants`. Uses an "upsert-like" strategy: insert new rows and
 silently skip duplicates based on `url` (unique constraint).
 """
+# pylint: disable=duplicate-code
 
 import json
 import os
@@ -48,7 +49,7 @@ def parse_date(date_str):
         return None
 
 
-def safe_float(x):
+def safe_float(x):  # pylint: disable=duplicate-code
     """Best-effort conversion to float; returns None if missing/invalid."""
     try:
         if x is None or x == "":
