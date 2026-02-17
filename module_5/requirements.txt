@@ -1,0 +1,9 @@
+flask
+psycopg[binary]
+pytest
+pytest-cov
+requests
+beautifulsoup4
+lxml
+sphinx
+sphinx-rtd-theme

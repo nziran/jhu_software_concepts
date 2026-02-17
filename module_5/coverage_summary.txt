@@ -1,0 +1,17 @@
+.........................................................                [100%]
+================================ tests coverage ================================
+_______________ coverage: platform darwin, python 3.12.7-final-0 _______________
+
+Name                   Stmts   Miss  Cover   Missing
+----------------------------------------------------
+src/__init__.py            0      0   100%
+src/app.py                96      0   100%
+src/clean_update.py      106      0   100%
+src/load_data.py          44      0   100%
+src/load_update.py        48      0   100%
+src/query_data.py         69      0   100%
+src/test_app_main.py       9      0   100%
+----------------------------------------------------
+TOTAL                    372      0   100%
+Required test coverage of 100% reached. Total coverage: 100.00%
+57 passed in 2.93s

@@ -1,0 +1,182 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Testing Guide &mdash; GradCafe 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Operational Notes" href="operational_notes.html" />
+    <link rel="prev" title="API Reference" href="api.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GradCafe
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview &amp; Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Testing Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#test-markers-required">Test markers (required)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#quick-local-runs">Quick local runs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#stable-ui-selectors-used-in-tests">Stable UI selectors used in tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#test-doubles-dependency-injection">Test doubles / dependency injection</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#formatting-expectations-asserted-by-tests">Formatting expectations asserted by tests</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="operational_notes.html">Operational Notes</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GradCafe</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Testing Guide</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/testing.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="testing-guide">
+<h1>Testing Guide<a class="headerlink" href="#testing-guide" title="Link to this heading"></a></h1>
+<section id="test-markers-required">
+<h2>Test markers (required)<a class="headerlink" href="#test-markers-required" title="Link to this heading"></a></h2>
+<p>All tests in this project are marked with one (or more) of these markers:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">web</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">buttons</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">analysis</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">db</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">integration</span></code></p></li>
+</ul>
+<p>To run the full suite (the grading command), from <code class="docutils literal notranslate"><span class="pre">module_4/</span></code>:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pytest<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;web or buttons or analysis or db or integration&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="quick-local-runs">
+<h2>Quick local runs<a class="headerlink" href="#quick-local-runs" title="Link to this heading"></a></h2>
+<p>Run everything:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pytest
+</pre></div>
+</div>
+<p>Run only a subset (examples):</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>pytest<span class="w"> </span>-m<span class="w"> </span>web
+pytest<span class="w"> </span>-m<span class="w"> </span>db
+pytest<span class="w"> </span>-m<span class="w"> </span>integration
+</pre></div>
+</div>
+</section>
+<section id="stable-ui-selectors-used-in-tests">
+<h2>Stable UI selectors used in tests<a class="headerlink" href="#stable-ui-selectors-used-in-tests" title="Link to this heading"></a></h2>
+<p>The UI tests rely on stable HTML selectors (<code class="docutils literal notranslate"><span class="pre">data-testid</span></code> attributes) so tests
+do not break when styling changes.</p>
+<p>Required selectors:</p>
+<ul class="simple">
+<li><p>Pull button: <code class="docutils literal notranslate"><span class="pre">data-testid=&quot;pull-data-btn&quot;</span></code></p></li>
+<li><p>Update button: <code class="docutils literal notranslate"><span class="pre">data-testid=&quot;update-analysis-btn&quot;</span></code></p></li>
+</ul>
+</section>
+<section id="test-doubles-dependency-injection">
+<h2>Test doubles / dependency injection<a class="headerlink" href="#test-doubles-dependency-injection" title="Link to this heading"></a></h2>
+<p>This project avoids live network calls during tests.</p>
+<p>In tests, the ETL pipeline functions (scrape/load/update) are replaced with
+fakes/mocks so that:</p>
+<ul class="simple">
+<li><p>tests are deterministic</p></li>
+<li><p>no real GradCafe scraping is performed</p></li>
+<li><p>database writes can be asserted safely</p></li>
+</ul>
+<p>Busy-state tests verify that when a pull is in progress:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/pull-data</span></code> and/or <code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/update-analysis</span></code> returns <code class="docutils literal notranslate"><span class="pre">409</span></code> with
+<code class="docutils literal notranslate"><span class="pre">{&quot;busy&quot;:</span> <span class="pre">true}</span></code> (per route behavior), and no work is performed.</p></li>
+</ul>
+</section>
+<section id="formatting-expectations-asserted-by-tests">
+<h2>Formatting expectations asserted by tests<a class="headerlink" href="#formatting-expectations-asserted-by-tests" title="Link to this heading"></a></h2>
+<p>The analysis page must:</p>
+<ul class="simple">
+<li><p>render at least one <code class="docutils literal notranslate"><span class="pre">Answer:</span></code> label</p></li>
+<li><p>render percentages with <strong>two decimals</strong> (example: <code class="docutils literal notranslate"><span class="pre">39.28%</span></code>)</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="api.html" class="btn btn-neutral float-left" title="API Reference" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="operational_notes.html" class="btn btn-neutral float-right" title="Operational Notes" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Navid Ziran.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

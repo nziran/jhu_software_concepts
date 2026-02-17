@@ -1,0 +1,208 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Operational Notes &mdash; GradCafe 1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=f2a433a1"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Testing Guide" href="testing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            GradCafe
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Overview &amp; Setup</a></li>
+<li class="toctree-l1"><a class="reference internal" href="architecture.html">Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing Guide</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Operational Notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#busy-state-policy">Busy-State Policy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#idempotency-strategy">Idempotency Strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#uniqueness-rules">Uniqueness Rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#troubleshooting">Troubleshooting</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#database-connection-errors">Database connection errors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#busy-state-stuck">Busy-state stuck</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ci-failures">CI failures</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#missing-dependencies">Missing dependencies</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#documentation-build-issues">Documentation build issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">GradCafe</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Operational Notes</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/operational_notes.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="operational-notes">
+<h1>Operational Notes<a class="headerlink" href="#operational-notes" title="Link to this heading"></a></h1>
+<section id="busy-state-policy">
+<h2>Busy-State Policy<a class="headerlink" href="#busy-state-policy" title="Link to this heading"></a></h2>
+<p>The application prevents concurrent ETL pipeline runs to avoid database
+corruption and duplicate writes.</p>
+<p>When a pull operation is running:</p>
+<ul class="simple">
+<li><p>Additional POST /pull-data requests return HTTP 409 with {“busy”: true}</p></li>
+<li><p>POST /update-analysis is blocked until the pull completes</p></li>
+</ul>
+<p>A global lock and job_running flag enforce this policy. The flag resets
+even if a pipeline error occurs, ensuring the UI never becomes permanently
+locked.</p>
+<p>This behavior is verified by automated tests.</p>
+</section>
+<section id="idempotency-strategy">
+<h2>Idempotency Strategy<a class="headerlink" href="#idempotency-strategy" title="Link to this heading"></a></h2>
+<p>The ETL pipeline is designed so repeated pulls do not create duplicate rows.</p>
+<p>Key safeguards include:</p>
+<ul class="simple">
+<li><p>Database uniqueness constraints</p></li>
+<li><p>Loader logic that inserts only new records</p></li>
+<li><p>Tests verifying repeated pulls preserve row counts</p></li>
+</ul>
+<p>This ensures data integrity even if the same dataset is processed multiple
+times.</p>
+</section>
+<section id="uniqueness-rules">
+<h2>Uniqueness Rules<a class="headerlink" href="#uniqueness-rules" title="Link to this heading"></a></h2>
+<p>Records are uniquely identified using the schema rules established in
+Module 3.</p>
+<p>Duplicate survey entries are rejected at insert time, guaranteeing that:</p>
+<ul class="simple">
+<li><p>Pulling identical data twice does not inflate totals</p></li>
+<li><p>Overlapping datasets merge safely</p></li>
+</ul>
+<p>These guarantees are validated by database unit tests.</p>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<section id="database-connection-errors">
+<h3>Database connection errors<a class="headerlink" href="#database-connection-errors" title="Link to this heading"></a></h3>
+<p>If the app or tests fail to connect:</p>
+<ul class="simple">
+<li><p>Ensure PostgreSQL is running</p></li>
+<li><p>Confirm DATABASE_URL is set correctly</p></li>
+</ul>
+<p>Example:</p>
+<p>export DATABASE_URL=”postgresql://user&#64;localhost:5432/gradcafe”</p>
+</section>
+<section id="busy-state-stuck">
+<h3>Busy-state stuck<a class="headerlink" href="#busy-state-stuck" title="Link to this heading"></a></h3>
+<p>If the UI appears locked:</p>
+<ul class="simple">
+<li><p>Check update_job.log for errors</p></li>
+<li><p>Restart the Flask server</p></li>
+</ul>
+<p>The job_running flag resets automatically after failures.</p>
+</section>
+<section id="ci-failures">
+<h3>CI failures<a class="headerlink" href="#ci-failures" title="Link to this heading"></a></h3>
+<p>If GitHub Actions fails:</p>
+<ul class="simple">
+<li><p>Verify PostgreSQL service configuration</p></li>
+<li><p>Confirm pytest markers and coverage settings</p></li>
+<li><p>Ensure all tests pass locally</p></li>
+</ul>
+<p>Run locally:</p>
+<p>pytest -m “web or buttons or analysis or db or integration”</p>
+</section>
+<section id="missing-dependencies">
+<h3>Missing dependencies<a class="headerlink" href="#missing-dependencies" title="Link to this heading"></a></h3>
+<p>If imports fail:</p>
+<p>pip install -r requirements.txt</p>
+</section>
+<section id="documentation-build-issues">
+<h3>Documentation build issues<a class="headerlink" href="#documentation-build-issues" title="Link to this heading"></a></h3>
+<p>Rebuild Sphinx docs:</p>
+<p>cd docs
+make clean
+make html</p>
+<p>Open:</p>
+<p>docs/build/html/index.html</p>
+</section>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="testing.html" class="btn btn-neutral float-left" title="Testing Guide" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, Navid Ziran.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
