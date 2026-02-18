@@ -473,7 +473,16 @@ def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple
                 r["comments"] = extra["detail_comments"]
 
             # Overwrite the detail fields in the raw record
-            for k in ["degree", "degree_level", "gpa", "gre_total", "gre_v", "gre_aw", "start_term", "start_year"]:
+            for k in [
+                "degree",
+                "degree_level",
+                "gpa",
+                "gre_total",
+                "gre_v",
+                "gre_aw",
+                "start_term",
+                "start_year",
+            ]:
                 r[k] = extra.get(k)
 
             # Store international status as raw boolean
