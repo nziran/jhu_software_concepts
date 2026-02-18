@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name
 """Tests for the Flask web pages and required routes."""
 
 from __future__ import annotations
@@ -26,7 +27,7 @@ def test_app_has_required_routes():
     assert "/pull-data" in routes
     assert "/update-analysis" in routes
 
-def test_get_analysis_page_loads_and_contains_expected_text(flask_client):
+def test_get_analysis_page_loads_and_contains_expected_text(client):
     """Test GET /analysis.
 
     Checks:
@@ -35,7 +36,7 @@ def test_get_analysis_page_loads_and_contains_expected_text(flask_client):
       - contains 'Analysis'
       - contains at least one 'card-answer'
     """
-    resp = flask_client.get("/analysis")
+    resp = client.get("/analysis")
     assert resp.status_code == 200
 
     html = resp.get_data(as_text=True)

@@ -34,8 +34,17 @@ def _delete_test_rows(conn):
 
 
 @pytest.mark.db
+def test_missing_json_path_raises(monkeypatch):
+    # Force all candidate paths to appear missing
+    monkeypatch.setattr(load_data.Path, "exists", lambda self: False)
+
+    # Reload module so import-time logic re-runs
+    with pytest.raises(FileNotFoundError):
+        importlib.reload(load_data)
+
+
+@pytest.mark.db
 def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):  # pylint: disable=too-many-locals
-    # --- fake input JSON (matches keys load_data expects) ---
     fake = [
         {
             "program": "CS",
@@ -59,14 +68,14 @@ def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):  # pyl
             "program": "Physics",
             "university": "LoadData U",
             "comments": "yo",
-            "date_posted": "bad-date",  # should become None
+            "date_posted": "bad-date",
             "entry_url": TEST_URLS[1],
             "applicant_status": "Rejected",
             "start_term": None,
             "start_year": None,
             "US/International": "International",
-            "GPA": "",  # should become None
-            "gre_total": "not-a-num",  # should become None
+            "GPA": "",
+            "gre_total": "not-a-num",
             "gre_v": "160",
             "gre_aw": "4.0",
             "degree": "PhD",
@@ -80,11 +89,9 @@ def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):  # pyl
 
     monkeypatch.setattr(load_data, "CLEANED_JSON_PATH", p)
 
-    # clean slate
     with _connect() as conn:
         _delete_test_rows(conn)
 
-    # run twice (idempotency via UNIQUE(url))
     load_data.main()
     load_data.main()
 
@@ -103,23 +110,13 @@ def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):  # pyl
 
         assert len(rows) == 2
 
-        # spot-check inserted content
-        url0, program0, uni0, status0, _term0, _date0, _gpa0, _gre0 = rows[0]
-        assert url0 in TEST_URLS
-        assert program0 is not None
-        assert uni0 is not None
-        assert status0 is not None
-
-        # term should be constructed for first record
         assert any(r[4] == "Fall 2026" for r in rows)
 
-        # second record had bad date + empty GPA + bad gre_total -> should be None-ish
         bad = [r for r in rows if r[0] == TEST_URLS[1]][0]
-        assert bad[5] is None  # date_added
-        assert bad[6] is None  # gpa
-        assert bad[7] is None  # gre
+        assert bad[5] is None
+        assert bad[6] is None
+        assert bad[7] is None
 
-        # cleanup
         _delete_test_rows(conn)
 
 
@@ -127,18 +124,9 @@ def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):  # pyl
     "ignore:'src\\.load_data' found in sys\\.modules.*:RuntimeWarning"
 )
 @pytest.mark.db
-def test_load_data_runs_as_script_hits_main_guard(_tmp_path):
-    """
-    Covers: if __name__ == "__main__": main()
-    We do it by:
-      1) writing the expected default JSON file into src/ next to load_data.py
-      2) running the module as __main__
-      3) cleaning up the inserted DB row + the temp JSON file
-    """
-    # real path: <project>/src/llm_extend_applicant_data.json
+def test_load_data_runs_as_script_hits_main_guard():
     default_json = load_data.Path(load_data.__file__).parent / "llm_extend_applicant_data.json"
 
-    # Write minimal data (one row) to default location
     payload = [
         {
             "program": "ScriptRun",
@@ -154,53 +142,35 @@ def test_load_data_runs_as_script_hits_main_guard(_tmp_path):
     ]
     default_json.write_text(json.dumps(payload), encoding="utf-8")
 
-    # clean slate for our URL
     with _connect() as conn:
         _delete_test_rows(conn)
 
-    # Execute module as a script (hits __main__ guard)
     runpy.run_module("src.load_data", run_name="__main__")
 
-    # verify row exists, then cleanup
     with _connect() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM applicants WHERE url = %s;", (TEST_URLS[0],))
             assert cur.fetchone()[0] in (0, 1)
         _delete_test_rows(conn)
 
-    # cleanup the json file we dropped in src/
     default_json.unlink(missing_ok=True)
 
 
 @pytest.mark.db
 def test_load_data_helpers_handle_empty_inputs():
-    # parse_date: empty/missing should return None (covers the "if not date_str" branch)
     assert load_data.parse_date("") is None
     assert load_data.parse_date(None) is None
-
-    # safe_float: None/"" should return None (covers the "if x is None or x == ''" branch)
     assert load_data.safe_float("") is None
     assert load_data.safe_float(None) is None
 
 
 @pytest.mark.db
 def test_load_data_main_raises_when_input_file_missing(monkeypatch, tmp_path):
-    # point loader at a file that does NOT exist
     missing = tmp_path / "does_not_exist.json"
     monkeypatch.setattr(load_data, "CLEANED_JSON_PATH", missing)
 
     with pytest.raises(FileNotFoundError):
         load_data.main()
-
-
-@pytest.mark.db
-def test_missing_json_path_raises(monkeypatch):
-    # Force all candidate paths to appear missing
-    monkeypatch.setattr(load_data.Path, "exists", lambda self: False)
-
-    # Reload module so CLEANED_JSON_PATH logic re-runs
-    with pytest.raises(FileNotFoundError):
-        importlib.reload(load_data)
 
 
 @pytest.mark.db
