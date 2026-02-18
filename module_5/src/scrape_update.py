@@ -48,7 +48,7 @@ def load_existing_urls_from_db() -> set[str]:
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
     ) as conn:
-        
+
         with conn.cursor() as cur:
             cur.execute("SELECT url FROM applicants WHERE url IS NOT NULL;")
             for (u,) in cur.fetchall():
