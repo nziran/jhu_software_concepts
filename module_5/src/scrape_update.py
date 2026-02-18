@@ -10,6 +10,7 @@ Database credentials are read exclusively from environment variables.
 import json
 import re
 import time
+import os
 import socket
 from datetime import datetime, timezone
 import urllib.request as urllib_request
@@ -19,7 +20,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from bs4 import BeautifulSoup
 import psycopg
-import os
+
 
 
 # -----------------------------
@@ -206,7 +207,22 @@ def _degree_level(degree_type: str | None) -> str | None:
         return None
     t = degree_type.strip().lower()
 
-    if any(x in t for x in ["phd", "dphil", "doctor", "psyd", "edd", "drph", "dpt", "md", "jd", "dds", "dmd"]):
+    if any(
+    x in t
+    for x in [
+        "phd",
+        "dphil",
+        "doctor",
+        "psyd",
+        "edd",
+        "drph",
+        "dpt",
+        "md",
+        "jd",
+        "dds",
+        "dmd",
+        ]
+    ):
         return "PhD"
 
     if "master" in t or re.search(r"\b(ma|ms|mfa|meng|mpa|mpp|mph|msc|mme|msw|mha)\b", t):
@@ -260,7 +276,11 @@ def _parse_decision(decision_text: str | None) -> tuple[str | None, str | None, 
     rejected_date = None
     status = None
 
-    m = re.search(r"^(Accepted|Rejected|Wait listed|Waitlisted)\s+on\s+(.+)$", decision_text, flags=re.I)
+    m = re.search(
+        r"^(Accepted|Rejected|Wait listed|Waitlisted)\s+on\s+(.+)$",
+        decision_text,
+        flags=re.I,
+    )
     if m:
         status = m.group(1).strip().title().replace("Wait Listed", "Waitlisted")
         d = _normalize_none(m.group(2))
@@ -399,7 +419,7 @@ def _parse_result_page(entry_url: str) -> dict:
     # - anything else (non-empty) -> True
     is_international = None
     if origin:
-        is_international = (origin.strip().lower() != "american")
+        is_international = origin.strip().lower() != "american"
 
     return {
         "degree": degree,
@@ -562,8 +582,10 @@ def scrape_data(resume: bool = True) -> None:
                 pages_with_no_new = 0
 
             if pages_with_no_new >= STOP_AFTER_PAGES_WITH_NO_NEW:
-                print(f"[early stop] {STOP_AFTER_PAGES_WITH_NO_NEW} consecutive pages with no new rows. Stopping.")
-
+                print(
+                    f"[early stop] {STOP_AFTER_PAGES_WITH_NO_NEW} consecutive pages "
+                    "with no new rows. Stopping."
+                )
                 # Before stopping, fetch details for any remaining new rows in this chunk
                 if FETCH_DETAILS and chunk_new_indices:
                     print(f"[details] early-stop final fetch for {len(chunk_new_indices)} rows ...")
@@ -578,11 +600,30 @@ def scrape_data(resume: bool = True) -> None:
                 break
 
             # Chunk boundary: fetch details for accumulated new rows
-            if FETCH_DETAILS and (page % CHUNK_SURVEY_PAGES == 0) and chunk_new_indices:
-                print(f"[details] fetching details for last {len(chunk_new_indices)} new rows (workers={MAX_WORKERS}) ...")
-                updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
+            if (
+                FETCH_DETAILS
+                and (page % CHUNK_SURVEY_PAGES == 0)
+                and chunk_new_indices
+            ):
+                print(
+                    f"[details] fetching details for last "
+                    f"{len(chunk_new_indices)} new rows "
+                    f"(workers={MAX_WORKERS}) ..."
+                )
+
+                updated, failed = _fetch_details_for_indices(
+                    records,
+                    chunk_new_indices,
+                )
+
                 total_failed_details += failed
-                print(f"[details] chunk done: updated={updated}, failed={failed}, total_failed_details={total_failed_details}")
+
+                print(
+                    f"[details] chunk done: updated={updated}, "
+                    f"failed={failed}, "
+                    f"total_failed_details={total_failed_details}"
+                )
+
                 chunk_new_indices = []
 
                 save_data(records, UPDATE_OUTPUT_JSON)
@@ -606,7 +647,11 @@ def scrape_data(resume: bool = True) -> None:
         print(f"[details] final fetch for remaining {len(chunk_new_indices)} rows ...")
         updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
         total_failed_details += failed
-        print(f"[details] final done: updated={updated}, failed={failed}, total_failed_details={total_failed_details}")
+        print(
+            f"[details] final done: updated={updated}, "
+            f"failed={failed}, "
+            f"total_failed_details={total_failed_details}"
+        )
 
     # Defensive schema: guarantee keys exist even if some pages were missing fields
     required_keys = [
