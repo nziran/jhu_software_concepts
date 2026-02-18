@@ -2,9 +2,14 @@ name: GradCafe Tests
 
 on:
   push:
-    branches: [ main ]
+    paths:
+      - "module_4/**"
+      - ".github/workflows/module_4_ci.yml"
   pull_request:
-
+    paths:
+      - "module_4/**"
+      - ".github/workflows/module_4_ci.yml"
+      
 jobs:
   test:
     runs-on: ubuntu-latest
