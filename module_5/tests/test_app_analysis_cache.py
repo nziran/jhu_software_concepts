@@ -1,10 +1,13 @@
+"""
+Tests for analysis cache behavior in the Flask app.
+"""
+
 import pytest
+import src.app as appmod
 
 
 @pytest.mark.web
 def test_get_analysis_populates_cache_when_empty(monkeypatch, client):
-    import src.app as appmod
-
     # force empty cache branch
     appmod.analysis_cache = []
 
@@ -21,12 +24,9 @@ def test_get_analysis_populates_cache_when_empty(monkeypatch, client):
 
 @pytest.mark.web
 def test_get_analysis_does_not_repopulate_cache_when_already_filled(monkeypatch, client):
-    import src.app as appmod
-
     # pre-fill cache so branch is skipped
     appmod.analysis_cache = [{"id": "QX", "question": "q", "answer": "a"}]
 
-    # if called, we'd know
     called = {"hit": False}
     monkeypatch.setattr(
         appmod,

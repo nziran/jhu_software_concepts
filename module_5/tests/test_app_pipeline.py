@@ -1,5 +1,10 @@
-import pytest
+"""Tests for run_update_pipeline success and failure paths."""
+
 import subprocess
+
+import pytest
+
+# pylint: disable=import-outside-toplevel
 
 
 @pytest.mark.buttons
@@ -12,21 +17,23 @@ def test_run_update_pipeline_success_sets_message(monkeypatch):
 
     # fake subprocess success
     monkeypatch.setattr(
-        "subprocess.run",
-        lambda *args, **kwargs: None
+        subprocess,
+        "run",
+        lambda *args, **kwargs: None,
     )
 
-    # fake log contents (patch class method)
+    # fake log contents
     monkeypatch.setattr(
         Path,
         "read_text",
-        lambda *args, **kwargs: "Inserted 5 new rows"
+        lambda *args, **kwargs: "Inserted 5 new rows",
     )
 
     appmod.run_update_pipeline()
 
     assert appmod.job_running is False
     assert "Update completed successfully" in appmod.job_last_message
+
 
 @pytest.mark.buttons
 def test_run_update_pipeline_failure_sets_failed_message(monkeypatch):

@@ -1,4 +1,8 @@
+"""Tests for the CLI entry point in query_data."""
+
 import pytest
+
+import src.query_data as qd
 
 
 @pytest.mark.analysis
@@ -7,8 +11,6 @@ def test_query_data_main_prints_cards(monkeypatch, capsys):
     Covers CLI main() path in query_data.py by mocking analysis cards
     and verifying printed formatting.
     """
-    import src.query_data as qd
-
     fake_cards = [
         {
             "id": "QX",

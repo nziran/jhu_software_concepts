@@ -1,7 +1,14 @@
+"""Database-focused tests for loader inserts, idempotency, and query card shape."""
+
 import json
-import pytest
-import psycopg
 import os
+
+import psycopg
+import pytest
+
+import src.app as appmod
+import src.load_update as lu
+import src.query_data as qd
 
 
 TEST_URLS = [
@@ -17,7 +24,8 @@ def _connect():
         user=os.getenv("PGUSER", "ziran"),
         password=os.getenv("PGPASSWORD", "ziran"),
         host=os.getenv("PGHOST", "localhost"),
-        port=int(os.getenv("PGPORT", "5432")),)
+        port=int(os.getenv("PGPORT", "5432")),
+    )
 
 
 def _delete_test_rows(conn):
@@ -33,8 +41,6 @@ def test_insert_on_pull_and_required_fields(monkeypatch, tmp_path):
       - Before: target rows absent
       - After load_update.main(): rows exist with required fields populated
     """
-    import src.load_update as lu
-
     # Create fake cleaned update file
     fake_records = [
         {
@@ -121,8 +127,6 @@ def test_idempotency_duplicate_load_does_not_duplicate_rows(monkeypatch, tmp_pat
     Rubric: idempotency/constraints
       - Running the same load twice does not duplicate rows (URL uniqueness)
     """
-    import src.load_update as lu
-
     fake_records = [
         {
             "program": "Computer Science",
@@ -177,15 +181,13 @@ def test_idempotency_duplicate_load_does_not_duplicate_rows(monkeypatch, tmp_pat
 
         _delete_test_rows(conn)
 
+
 @pytest.mark.db
 def test_post_pull_data_inserts_rows_via_loader(monkeypatch, tmp_path, client):
     """
     Rubric: Verify database writes after POST /pull-data (mocked scraper/loader).
     We fake the pipeline so it doesn't scrape the internet but still inserts rows.
     """
-    import src.app as appmod
-    import src.load_update as lu
-
     # --- Prepare fake cleaned update file ---
     fake_records = [
         {
@@ -236,7 +238,7 @@ def test_post_pull_data_inserts_rows_via_loader(monkeypatch, tmp_path, client):
     appmod.job_running = False
 
     # 2) patch thread so it immediately runs the target instead of backgrounding
-    class ImmediateThread:
+    class ImmediateThread:  # pylint: disable=too-few-public-methods
         def __init__(self, target=None, daemon=None):
             self.target = target
             self.daemon = daemon
@@ -246,8 +248,7 @@ def test_post_pull_data_inserts_rows_via_loader(monkeypatch, tmp_path, client):
 
     monkeypatch.setattr(appmod.threading, "Thread", ImmediateThread)
 
-    # 3) patch subprocess.run: when app tries to run LOAD stage, run loader main()
-
+    # 3) patch run_update_pipeline: instead of subprocess stages, run loader main()
     def fake_pipeline():
         lu.main()
 
@@ -265,6 +266,7 @@ def test_post_pull_data_inserts_rows_via_loader(monkeypatch, tmp_path, client):
         assert count == 2
         _delete_test_rows(conn)
 
+
 @pytest.mark.db
 def test_query_function_returns_expected_keys(monkeypatch):
     """
@@ -272,17 +274,14 @@ def test_query_function_returns_expected_keys(monkeypatch):
       - Query function returns a dict (or list of dicts) with keys used by template.
     We don't want to hit the real DB here, so we mock the return.
     """
-    import src.query_data as qd
-
-    # If your template expects cards like:
-    # {"id": "Q1", "question": "...", "answer": "..."}
-    # then these are the required keys.
     expected = {"id", "question", "answer"}
 
     # Mock get_analysis_cards to avoid DB
-    monkeypatch.setattr(qd, "get_analysis_cards", lambda: [
-        {"id": "Q1", "question": "Test question", "answer": "Test answer"}
-    ])
+    monkeypatch.setattr(
+        qd,
+        "get_analysis_cards",
+        lambda: [{"id": "Q1", "question": "Test question", "answer": "Test answer"}],
+    )
 
     cards = qd.get_analysis_cards()
     assert isinstance(cards, list)

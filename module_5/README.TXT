@@ -321,9 +321,10 @@ Notes
 
 Pylint Usage
 
-• Pylint was run in Module 5 using the following command:
+• Pylint was run on all Python code files in Module 5 using the following command:
         
      python -m pylint src
+     
 
 This command ensures that pylint is run inside the venv.  
 All files in module 5 were tested, however the src folder was linted first.

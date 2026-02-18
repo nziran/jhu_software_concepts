@@ -1,10 +1,15 @@
-import json
-import pytest
-import psycopg
-import runpy
-import os
+"""Tests for src.load_data main() behavior and helper functions."""
+
 import importlib
-import src.load_data as load_data
+import json
+import os
+import runpy
+
+import psycopg
+import pytest
+
+from src import load_data
+
 
 TEST_URLS = [
     "https://example.com/gradcafe-loaddata-1",
@@ -14,12 +19,13 @@ TEST_URLS = [
 
 def _connect():
     return psycopg.connect(
-    dbname=os.getenv("PGDATABASE", "gradcafe"),
-    user=os.getenv("PGUSER", "ziran"),
-    password=os.getenv("PGPASSWORD", "ziran"),
-    host=os.getenv("PGHOST", "localhost"),
-    port=int(os.getenv("PGPORT", "5432")),
-)
+        dbname=os.getenv("PGDATABASE", "gradcafe"),
+        user=os.getenv("PGUSER", "ziran"),
+        password=os.getenv("PGPASSWORD", "ziran"),
+        host=os.getenv("PGHOST", "localhost"),
+        port=int(os.getenv("PGPORT", "5432")),
+    )
+
 
 def _delete_test_rows(conn):
     with conn.cursor() as cur:
@@ -28,9 +34,7 @@ def _delete_test_rows(conn):
 
 
 @pytest.mark.db
-def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):
-    import src.load_data as ld
-
+def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):  # pylint: disable=too-many-locals
     # --- fake input JSON (matches keys load_data expects) ---
     fake = [
         {
@@ -61,8 +65,8 @@ def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):
             "start_term": None,
             "start_year": None,
             "US/International": "International",
-            "GPA": "",                 # should become None
-            "gre_total": "not-a-num",   # should become None
+            "GPA": "",  # should become None
+            "gre_total": "not-a-num",  # should become None
             "gre_v": "160",
             "gre_aw": "4.0",
             "degree": "PhD",
@@ -74,15 +78,15 @@ def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):
     p = tmp_path / "llm_extend_applicant_data.json"
     p.write_text(json.dumps(fake), encoding="utf-8")
 
-    monkeypatch.setattr(ld, "CLEANED_JSON_PATH", p)
+    monkeypatch.setattr(load_data, "CLEANED_JSON_PATH", p)
 
     # clean slate
     with _connect() as conn:
         _delete_test_rows(conn)
 
     # run twice (idempotency via UNIQUE(url))
-    ld.main()
-    ld.main()
+    load_data.main()
+    load_data.main()
 
     with _connect() as conn:
         with conn.cursor() as cur:
@@ -100,7 +104,7 @@ def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):
         assert len(rows) == 2
 
         # spot-check inserted content
-        url0, program0, uni0, status0, term0, date0, gpa0, gre0 = rows[0]
+        url0, program0, uni0, status0, _term0, _date0, _gpa0, _gre0 = rows[0]
         assert url0 in TEST_URLS
         assert program0 is not None
         assert uni0 is not None
@@ -110,21 +114,20 @@ def test_load_data_main_inserts_and_is_idempotent(monkeypatch, tmp_path):
         assert any(r[4] == "Fall 2026" for r in rows)
 
         # second record had bad date + empty GPA + bad gre_total -> should be None-ish
-        # (we don't know which row index due to ordering, so search)
         bad = [r for r in rows if r[0] == TEST_URLS[1]][0]
-        assert bad[5] is None      # date_added
-        assert bad[6] is None      # gpa
-        assert bad[7] is None      # gre
+        assert bad[5] is None  # date_added
+        assert bad[6] is None  # gpa
+        assert bad[7] is None  # gre
 
         # cleanup
         _delete_test_rows(conn)
-        
+
+
 @pytest.mark.filterwarnings(
     "ignore:'src\\.load_data' found in sys\\.modules.*:RuntimeWarning"
 )
-
 @pytest.mark.db
-def test_load_data_runs_as_script_hits_main_guard(tmp_path, monkeypatch):
+def test_load_data_runs_as_script_hits_main_guard(_tmp_path):
     """
     Covers: if __name__ == "__main__": main()
     We do it by:
@@ -132,11 +135,8 @@ def test_load_data_runs_as_script_hits_main_guard(tmp_path, monkeypatch):
       2) running the module as __main__
       3) cleaning up the inserted DB row + the temp JSON file
     """
-    # Import to locate the real src directory on disk
-    import src.load_data as ld
-
     # real path: <project>/src/llm_extend_applicant_data.json
-    default_json = ld.Path(ld.__file__).parent / "llm_extend_applicant_data.json"
+    default_json = load_data.Path(load_data.__file__).parent / "llm_extend_applicant_data.json"
 
     # Write minimal data (one row) to default location
     payload = [
@@ -171,28 +171,27 @@ def test_load_data_runs_as_script_hits_main_guard(tmp_path, monkeypatch):
     # cleanup the json file we dropped in src/
     default_json.unlink(missing_ok=True)
 
+
 @pytest.mark.db
 def test_load_data_helpers_handle_empty_inputs():
-    import src.load_data as ld
-
     # parse_date: empty/missing should return None (covers the "if not date_str" branch)
-    assert ld.parse_date("") is None
-    assert ld.parse_date(None) is None
+    assert load_data.parse_date("") is None
+    assert load_data.parse_date(None) is None
 
     # safe_float: None/"" should return None (covers the "if x is None or x == ''" branch)
-    assert ld.safe_float("") is None
-    assert ld.safe_float(None) is None
+    assert load_data.safe_float("") is None
+    assert load_data.safe_float(None) is None
+
 
 @pytest.mark.db
 def test_load_data_main_raises_when_input_file_missing(monkeypatch, tmp_path):
-    import src.load_data as ld
-
     # point loader at a file that does NOT exist
     missing = tmp_path / "does_not_exist.json"
-    monkeypatch.setattr(ld, "CLEANED_JSON_PATH", missing)
+    monkeypatch.setattr(load_data, "CLEANED_JSON_PATH", missing)
 
     with pytest.raises(FileNotFoundError):
-        ld.main()
+        load_data.main()
+
 
 @pytest.mark.db
 def test_missing_json_path_raises(monkeypatch):
@@ -202,13 +201,13 @@ def test_missing_json_path_raises(monkeypatch):
     # Reload module so CLEANED_JSON_PATH logic re-runs
     with pytest.raises(FileNotFoundError):
         importlib.reload(load_data)
-        
+
+
 @pytest.mark.db
 def test_db_params_fallback(monkeypatch):
-    from src.load_data import _db_params
-
+    # pylint: disable=protected-access
     monkeypatch.delenv("DATABASE_URL", raising=False)
-    params = _db_params()
+    params = load_data._db_params()
 
     assert isinstance(params, dict)
     assert "dbname" in params

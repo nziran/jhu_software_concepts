@@ -1,12 +1,14 @@
-import json
+"""Tests for running src.load_update as a __main__ module."""
+
 import runpy
 import sys
 import types
+
 import pytest
 
 
 class _FakeCursor:
-    def execute(self, *args, **kwargs):
+    def execute(self, *_args, **_kwargs):
         return None
 
     def fetchone(self):
@@ -45,7 +47,7 @@ def test_load_update_main_runs(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
 
     # Fake psycopg module so running __main__ can't touch a real DB
-    fake_psycopg = types.SimpleNamespace(connect=lambda *a, **k: _FakeConn())
+    fake_psycopg = types.SimpleNamespace(connect=lambda *_a, **_k: _FakeConn())
     monkeypatch.setitem(sys.modules, "psycopg", fake_psycopg)
 
     # Run the module like: python -m src.load_update

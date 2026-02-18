@@ -1,17 +1,24 @@
+"""Pytest configuration and shared fixtures for Module 5 tests."""
+
 import os
+
 import pytest
 import psycopg
+
 from src.app import create_app
 
+
 def _pg_env(name: str, fallback: str | None = None) -> str | None:
-    # Prefer standard libpq env vars, then POSTGRES_* from actions services
+    """Return a Postgres environment variable with sensible fallbacks."""
     return (
         os.getenv(name)
         or os.getenv(name.replace("PG", "POSTGRES_"))
         or fallback
     )
 
+
 def _connect():
+    """Create a Postgres connection using environment variables."""
     return psycopg.connect(
         dbname=_pg_env("PGDATABASE", "gradcafe"),
         user=_pg_env("PGUSER", "ziran"),
@@ -20,9 +27,10 @@ def _connect():
         port=int(_pg_env("PGPORT", "5432") or 5432),
     )
 
+
 @pytest.fixture(scope="session", autouse=True)
 def ensure_schema():
-    """Make CI/graders portable: ensure applicants table exists before any tests."""
+    """Ensure the applicants table exists before any tests run."""
     ddl = """
     CREATE TABLE IF NOT EXISTS applicants (
         p_id BIGSERIAL PRIMARY KEY,
@@ -48,8 +56,10 @@ def ensure_schema():
             cur.execute(ddl)
         conn.commit()
 
+
 @pytest.fixture()
 def client():
+    """Return a Flask test client."""
     app = create_app()
     app.config.update(TESTING=True)
     return app.test_client()

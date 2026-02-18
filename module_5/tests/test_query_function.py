@@ -1,5 +1,8 @@
+"""Tests for query_data analysis card helpers."""
+
 import pytest
-from src.query_data import get_analysis_cards
+
+from src.query_data import _db_params, get_analysis_cards
 
 
 @pytest.mark.db
@@ -15,10 +18,9 @@ def test_query_returns_analysis_cards_structure():
         assert "question" in c
         assert "answer" in c
 
-@pytest.mark.db   
-def test_db_params_fallback(monkeypatch):
-    from src.query_data import _db_params
 
+@pytest.mark.db
+def test_db_params_fallback(monkeypatch):
     # simulate environment with NO DATABASE_URL
     monkeypatch.delenv("DATABASE_URL", raising=False)
 

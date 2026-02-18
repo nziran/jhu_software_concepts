@@ -1,8 +1,14 @@
+"""Integration tests covering pull/update and analysis rendering (offline)."""
+
 import json
-import re
-import pytest
-import psycopg
 import os
+import re
+
+import psycopg
+import pytest
+
+import src.app as appmod
+import src.load_update as lu
 
 
 TEST_URLS = [
@@ -10,6 +16,7 @@ TEST_URLS = [
     "https://example.com/integration-2",
     "https://example.com/integration-3",
 ]
+
 
 def _connect():
     return psycopg.connect(
@@ -20,6 +27,7 @@ def _connect():
         port=int(os.getenv("PGPORT", "5432")),
     )
 
+
 def _delete_test_rows(conn):
     with conn.cursor() as cur:
         cur.execute("DELETE FROM applicants WHERE url = ANY(%s);", (TEST_URLS,))
@@ -27,7 +35,9 @@ def _delete_test_rows(conn):
 
 
 @pytest.mark.integration
-def test_end_to_end_pull_update_render(monkeypatch, tmp_path, client):
+def test_end_to_end_pull_update_render(  # pylint: disable=too-many-locals
+    monkeypatch, tmp_path, client
+):
     """
     End-to-end (offline):
       - Inject fake pipeline that loads known records (no scrape)
@@ -35,9 +45,6 @@ def test_end_to_end_pull_update_render(monkeypatch, tmp_path, client):
       - POST /update-analysis succeeds (not busy)
       - GET /analysis renders Answer: labels and (if present) two-decimal percentages
     """
-    import src.app as appmod
-    import src.load_update as lu
-
     # Ensure clean slate
     with _connect() as conn:
         _delete_test_rows(conn)
@@ -90,7 +97,7 @@ def test_end_to_end_pull_update_render(monkeypatch, tmp_path, client):
 
     monkeypatch.setattr(appmod, "run_update_pipeline", fake_pipeline)
 
-    class ImmediateThread:
+    class ImmediateThread:  # pylint: disable=too-few-public-methods
         def __init__(self, target=None, daemon=None):
             self.target = target
             self.daemon = daemon
@@ -143,9 +150,6 @@ def test_multiple_pulls_overlapping_data_is_idempotent(monkeypatch, tmp_path, cl
       - run /pull-data twice with overlapping urls
       - DB should not duplicate rows (ON CONFLICT(url) DO NOTHING)
     """
-    import src.app as appmod
-    import src.load_update as lu
-
     with _connect() as conn:
         _delete_test_rows(conn)
 
@@ -206,7 +210,7 @@ def test_multiple_pulls_overlapping_data_is_idempotent(monkeypatch, tmp_path, cl
         },
     ]
 
-    class ImmediateThread:
+    class ImmediateThread:  # pylint: disable=too-few-public-methods
         def __init__(self, target=None, daemon=None):
             self.target = target
             self.daemon = daemon
@@ -239,4 +243,4 @@ def test_multiple_pulls_overlapping_data_is_idempotent(monkeypatch, tmp_path, cl
             count = cur.fetchone()[0]
         # unique URLs: 0,1,2 should exist exactly once
         assert count == 3
-  
+        _delete_test_rows(conn)

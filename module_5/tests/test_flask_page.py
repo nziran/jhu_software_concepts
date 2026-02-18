@@ -1,47 +1,41 @@
-# tests/test_flask_page.py
+"""Tests for the Flask web pages and required routes."""
+
+from __future__ import annotations
 
 import pytest
 
-pytestmark = pytest.mark.web
-
-# Import the Flask app object
 from src.app import app as flask_app
+
+pytestmark = pytest.mark.web
 
 
 @pytest.fixture()
 def client():
-    """
-    Pytest fixture that returns a Flask test client.
-    """
+    """Return a Flask test client."""
     flask_app.config.update(TESTING=True)
-    with flask_app.test_client() as client:
-        yield client
+    with flask_app.test_client() as test_client:
+        yield test_client
 
 
 def test_app_has_required_routes():
-    """
-    Assert the Flask app is created and includes the expected routes.
-    """
+    """Assert the Flask app is created and includes the expected routes."""
     routes = {rule.rule for rule in flask_app.url_map.iter_rules()}
 
-    # GET routes
     assert "/" in routes
     assert "/analysis" in routes
-
-    # POST routes (existence check)
     assert "/pull-data" in routes
     assert "/update-analysis" in routes
 
+def test_get_analysis_page_loads_and_contains_expected_text(flask_client):
+    """Test GET /analysis.
 
-def test_get_analysis_page_loads_and_contains_expected_text(client):
-    """
-    Test GET /analysis:
+    Checks:
       - status 200
       - contains Pull Data + Update Analysis buttons
       - contains 'Analysis'
-      - contains at least one 'Answer:'
+      - contains at least one 'card-answer'
     """
-    resp = client.get("/analysis")
+    resp = flask_client.get("/analysis")
     assert resp.status_code == 200
 
     html = resp.get_data(as_text=True)
