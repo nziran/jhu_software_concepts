@@ -32,7 +32,7 @@ analysis_cache = []
 analysis_last_updated = None  # pylint: disable=invalid-name
 
 app = Flask(__name__)
-app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev") # required for Flask flash messaging
+app.secret_key = os.environ["FLASK_SECRET_KEY"]
 
 def wants_json() -> bool:
     """Return True when the client prefers a JSON response over HTML."""

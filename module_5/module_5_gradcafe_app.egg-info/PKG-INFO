@@ -1,0 +1,12 @@
+Metadata-Version: 2.4
+Name: module_5_gradcafe_app
+Version: 0.1.0
+Summary: Module 5 GradCafe Flask app + secure SQL pipeline
+Requires-Python: >=3.10
+Requires-Dist: Flask
+Requires-Dist: psycopg[binary]
+Requires-Dist: beautifulsoup4
+Requires-Dist: requests
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary

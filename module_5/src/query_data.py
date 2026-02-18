@@ -12,28 +12,20 @@ import os
 
 import psycopg
 
-# ----------------------------
-# Database connection settings
-# ----------------------------
-DB_NAME = "gradcafe"
-DB_USER = "ziran"
-DB_HOST = "localhost"
-DB_PORT = 5432
 
-
-def _db_params():
-    """Return DATABASE_URL if set, otherwise a keyword-args dict for psycopg.connect()."""
-    db_url = os.getenv("DATABASE_URL")
-    if db_url:
-        return db_url
-
-    return {
-        "dbname": os.getenv("PGDATABASE", DB_NAME),
-        "user": os.getenv("PGUSER", DB_USER),
-        "password": os.getenv("PGPASSWORD"),
-        "host": os.getenv("PGHOST", DB_HOST),
-        "port": int(os.getenv("PGPORT", str(DB_PORT))),
-    }
+def _connect():
+    """
+    Step 3: Database hardening (no hard-coded creds).
+    Reads connection values from env vars:
+      DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
+    """
+    return psycopg.connect(
+        host=os.getenv("DB_HOST"),
+        port=os.getenv("DB_PORT"),
+        dbname=os.getenv("DB_NAME"),
+        user=os.getenv("DB_USER"),
+        password=os.getenv("DB_PASSWORD"),
+    )
 
 
 def get_analysis_cards():  # pylint: disable=too-many-locals
@@ -48,10 +40,7 @@ def get_analysis_cards():  # pylint: disable=too-many-locals
     """
     cards: list[dict[str, str]] = []
 
-    db = _db_params()
-    connect_kwargs = db if isinstance(db, str) else None
-
-    with psycopg.connect(connect_kwargs) if isinstance(db, str) else psycopg.connect(**db) as conn:
+    with _connect() as conn:
         with conn.cursor() as cur:
             # Q0: Total rows
             cur.execute("SELECT COUNT(*) FROM applicants;")
@@ -383,9 +372,7 @@ def main() -> None:
     """CLI runner for printing analysis cards."""
     cards = get_analysis_cards()
     for card in cards:
-        print(
-            f"{card['id']}) {card['question']}\n    Answer: {card['answer']}\n"
-        )
+        print(f"{card['id']}) {card['question']}\n    Answer: {card['answer']}\n")
 
 
 if __name__ == "__main__":

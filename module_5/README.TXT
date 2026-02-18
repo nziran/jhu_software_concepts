@@ -37,6 +37,37 @@ Example:
 
 ---
 
+Fresh Install
+
+This project can be installed from scratch using either pip or uv.
+
+Pip method
+
+Create and activate a virtual environment, then install dependencies:
+
+	python3 -m venv .venv
+	source .venv/bin/activate
+	pip install -r requirements.txt
+	pip install -e .
+
+Run the app:
+
+	python src/app.py
+
+UV method
+
+Create a virtual environment and sync it exactly to requirements.txt:
+
+	python3 -m venv .venv
+	source .venv/bin/activate
+	uv pip sync requirements.txt
+	pip install -e .
+
+Run the app:
+
+	python src/app.py
+
+
 Setup Instructions
 
 1. Create and activate virtual environment in the module_4 directory
