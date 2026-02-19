@@ -2,13 +2,7 @@ name: Module 5 CI
 
 on:
   push:
-    paths:
-      - "module_5/**"
-      - ".github/workflows/tests.yml"
   pull_request:
-    paths:
-      - "module_5/**"
-      - ".github/workflows/tests.yml"
 
 jobs:
   pytest:
