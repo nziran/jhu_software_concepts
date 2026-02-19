@@ -82,31 +82,48 @@ Alternatively, DATABASE_URL may be provided for compatibility.
 
 ⸻
 
-Fresh Install
+Grader Setup Instructions (Fresh Environment, No Password)
+	
+	1.	Start PostgreSQL
 
-Option 1: pip
+			psql -U postgres
+			CREATE DATABASE gradcafe;
+			\q
+	2.	Create a least-privilege user (no password)
 
-    python -m venv .venv
-    source .venv/bin/activate
-    pip install -r requirements.txt
-    pip install -e .
+			psql -U postgres -d gradcafe
+			CREATE ROLE app_user LOGIN;
+			GRANT CONNECT ON DATABASE gradcafe TO app_user;
+			GRANT USAGE ON SCHEMA public TO app_user;
+			GRANT SELECT, INSERT ON TABLE public.applicants TO app_user;
+			\q
 
-Option 2: uv (recommended for reproducibility)
+	3.	Set required environment variables
 
-    uv venv
-    source .venv/bin/activate
-    uv pip sync requirements.txt
-    pip install -e .
+			export DB_HOST=localhost
+			export DB_PORT=5432
+			export DB_NAME=gradcafe
+			export DB_USER=app_user
+			export DB_PASSWORD=””  # empty, since no password
+			Alternatively, you can provide a single DATABASE_URL:
+			export DATABASE_URL=“postgresql://app_user@localhost:5432/gradcafe”
 
-⸻
+	4.	Install dependencies and run the app
 
-Running the App
+			python -m venv .venv
+			source .venv/bin/activate
+			pip install -r requirements.txt
+			pip install -e .
+			python src/app.py
 
-    python src/app.py
+	5. 	Verify
+	
+			•	App runs at http://127.0.0.1:5050
+			•	Buttons (Pull Data, Update Analysis) work
 
-The app runs at:
-
-    http://127.0.0.1:5050
+	6.  Run pytest
+			
+			All tests should pass with 100% coverage.
 
 ⸻
 
