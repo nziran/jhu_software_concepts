@@ -1,306 +1,167 @@
 Name: Navid Ziran
 JHED ID: nziran1
-Module Info: Module 4 — Testing and Documentation Experimentation Assignment
-Due Date: 2/15/2026
+Module Info: Module 5 — Software Assurance + Secure SQL (SQLi Defense) Assignment
+Due Date: 2/23/2026
 
 SSH Repo URL: git@github.com:nziran/jhu_software_concepts.git
 
 ---
+Module 5 Overview
 
-Overview
+Module 5 focuses on software assurance and secure deployment practices applied to a 
+Flask and PostgreSQL web application. The goal of this module is not to add new features, 
+but to harden an existing system against common security risks while ensuring the project 
+can be reliably installed, tested, and audited in any environment.
 
-This project implements a GradCafe analysis dashboard using a Flask web
-application backed by a PostgreSQL database and an ETL pipeline.
+This assignment provides hands-on experience with secure coding workflows, including 
+static analysis, dependency inspection, environment isolation, and least-privilege 
+database access. Particular emphasis is placed on eliminating SQL injection risks, 
+enforcing safe database access patterns, and producing a reproducible, security-checked 
+codebase suitable for real-world deployment.
 
-It includes:
+Starting from the Module 4 application, the project is refactored to use parameterized 
+SQL via psycopg, removing all string-built queries and enforcing explicit LIMIT clauses 
+on database access. Database credentials are externalized using environment variables, 
+and the application is configured to run with a least-privilege PostgreSQL user to 
+minimize blast radius in the event of a compromise.
 
-• Flask web layer for analysis rendering and button-driven workflows
-• ETL pipeline for scraping, cleaning, and loading data
-• PostgreSQL persistence layer
-• Full pytest test suite with markers and CI
-• Sphinx documentation with API reference and testing guide
+In addition to code hardening, the module introduces software supply-chain practices. 
+Static analysis is enforced using Pylint with a perfect lint score, dependencies are 
+audited and visualized using pydeps and Graphviz, and the project is packaged with 
+setup.py to ensure consistent imports and install behavior across environments. 
+The application is verified to run in a clean virtual environment using both pip and uv,
+demonstrating full reproducibility.
 
-The application supports pulling new data, updating analysis, and rendering
-formatted analysis cards.
+By the end of Module 5, the application passes all tests with 100% coverage, installs 
+cleanly in a fresh environment, and includes tooling and documentation that reflect 
+modern software assurance standards. The result is a secure, reproducible Flask 
+application that demonstrates defensive programming, dependency awareness, and 
+production-ready engineering discipline.
 
 ---
 
 Environment Requirements
 
-• Python 3.12+
-• PostgreSQL 15+
+• Python 3.12 or newer
+• PostgreSQL 15 or newer
 • pip
-• virtualenv
+• virtualenv (or venv module)
 
-Environment variable required:
+⸻
 
-    DATABASE_URL — PostgreSQL connection string
+Project Structure
 
-Example:
+module_5/
+src/
+app.py — Flask application
+db.py — Secure database connection logic
+load_data.py — Initial data loader
+load_update.py — Incremental update loader
+query_data.py — Analysis queries
+clean_update.py — Data cleaning logic
+tests/ — Pytest test suite (100% coverage)
+requirements.txt — Runtime + tooling dependencies
+setup.py — Installable package definition
+dependency.svg — Python dependency graph
+README.md
 
-    postgresql://username@localhost:5432/gradcafe
+⸻
 
----
+Environment Variables
 
-Setup Instructions
+Database configuration is read from environment variables.
 
-1. Create and activate virtual environment in the module_4 directory
+Required variables:
+	•	DB_HOST
+	•	DB_PORT
+	•	DB_NAME
+	•	DB_USER
+	•	DB_PASSWORD
 
-    python3 -m venv .venv
+Alternatively, DATABASE_URL may be provided for compatibility.
+
+⸻
+
+Fresh Install
+
+Option 1: pip
+
+    python -m venv .venv
     source .venv/bin/activate
-
-2. Install dependencies
-
-    * All commands below must be run from the module_4 directory with the virtual environment activated.
-
     pip install -r requirements.txt
+    pip install -e .
 
-3.	Configure database
+Option 2: uv (recommended for reproducibility)
 
-    This application requires a PostgreSQL database connection.
-
-    Step A — Ensure PostgreSQL is running
-
-        Run:
-
-        pg_isready
-
-        You should see:
-
-        accepting connections
-
-    Step B — Create user and database
-
-        Run:
-
-        createuser <your_username>
-        createdb -O <your_username> gradcafe
-
-        * Replace <your_username> with your local PostgreSQL username (case-sensitive)
-
-        * if user or gradcafe already exists, user may see ERROR:  user (or gradcafe) already exists
-
-    Step C — Set environment variable
-
-        Run:
-
-        export DATABASE_URL="postgresql://<your_username>@localhost:5432/gradcafe"
-
-        Use the same username you created in Step B
-
-    Step D — Verify database connection
-
-        Run:
-
-        python -c "import os, psycopg; psycopg.connect(os.environ['DATABASE_URL']).close(); print('DB connect OK')"
-
-        * Note: If you copy-paste this command and get a syntax error, retype it manually — some editors auto-convert 
-        quotes to curly quotes, which Python does not accept.
-    
-        * Note: If using MacOS, ensure System Settings-->Keyboard-->Text Input-->Input Sources (Edit..)-->Use smart quotes and dashes is OFF
-
-        If successful, you should see:
-
-        DB connect OK
-
-        This confirms PostgreSQL is reachable and credentials are valid.
-
-    Step E - 
+    uv venv
+    source .venv/bin/activate
+    uv pip sync requirements.txt
+    pip install -e .
 
 ⸻
 
-            Option A — Fresh database
+Running the App
 
-            If the database gradcafe is new (fresh), then continue to Step 3F to load data into it.
+    python src/app.py
 
-⸻
+The app runs at:
 
-            Option B — Database already exists
-
-            If gradcafe exists and is already populated, user can 
-            check whether data already exists:
-
-                psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
-
-            If the count is non-zero, skip Step 3F since data has already been loaded into it and 
-            user can go directly to Step 4 (Run the application).
-
-            If gradcafe already exists and was created by a different user, you may see:
-
-                permission denied for table applicants
-
-            Fix this by granting permissions once (run as DB owner or superuser):
-
-            psql -d gradcafe -c "GRANT CONNECT ON DATABASE gradcafe TO <your_username>;
-            GRANT USAGE, CREATE ON SCHEMA public TO <your_username>;
-            GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO <your_username>;
-            GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO <your_username>;
-            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO <your_username>;
-            ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO <your_username>;"
-
-            After this, proceed normally.
+    http://127.0.0.1:5050
 
 ⸻
 
-Step F — Populate the database (create applicants table)
+Testing
 
-If the database is empty, run:
-
-python src/load_data.py
-
-The loader will:
-
-• Create the applicants table if missing
-• Insert cleaned applicant records
-• Safely skip duplicates
-
-Verify success:
-
-    psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
-
-A non-zero count confirms successful population.
-
-
-Environment Variable Reminder (Important)
-
-    Environment variables do not persist when you open a new terminal session. If you close Terminal and reopen it, 
-    you must re-export the database connection string.  The db connection string tells the app which database to use.
-
-    Verify the variable is set:
-
-        echo $DATABASE_URL
-
-    If nothing prints, re-export it:
-
-        export DATABASE_URL="postgresql://<your_username>@localhost:5432/gradcafe"
-
-    You can confirm the database connection with:
-
-        psql "$DATABASE_URL" -c "SELECT COUNT(*) FROM applicants;"
-
-    If successful, PostgreSQL will return a row count. This confirms the database is reachable and correctly configured.
-
-
-4. Run the application
-
-    python -m src.app
-
-    Open browser:
-
-    http://127.0.0.1:5050/analysis
-
----
-
-Running tests (marker policy check):
-
-    pytest -m "web or buttons or analysis or db or integration"
-
-    Runs the full marked suite and verifies that all tests are properly marked according to assignment policy.
-
----
-
-Running tests with coverage enforcement:
+Run the full test suite:
 
     pytest
 
-    Runs the entire test suite with pytest-cov enforcing 100% coverage as configured in pytest.ini.
+All tests pass with 100% coverage.
 
-Test Coverage Summary
+⸻
 
-The test suite validates all required behaviors for the GradCafe application.
+Pylint Usage
 
-Representative tests include:
+Pylint was run only against the application source code in 
+the src/ directory, as required. Test files and the virtual 
+environment were intentionally excluded.
 
-• Flask app & rendering — test_flask_page.py
-Verifies app creation, route availability, and correct rendering of the analysis page.
+Command used:
 
-• Buttons & busy-state behavior — test_buttons.py
-Ensures pull/update endpoints respond correctly and enforce concurrency gating.
+    pylint src
 
-• Analysis formatting — test_analysis_format.py
-Confirms labels and percentage formatting rules.
-
-• Database writes — test_db_insert.py
-Validates inserts, idempotency, and query integrity.
-
-• Integration workflows — test_integration_end_to_end.py
-Simulates pull → update → render pipeline using injected test data.
-
-Additional unit tests provide full branch coverage of scraping, loading, query logic, and helper functions.
-
+This command enforces static analysis on all application 
+modules (Flask app, database logic, and query code) while 
+avoiding false positives from test scaffolding or third-party packages.
 
 ---
 
-Architecture Summary
+Dependency Graph
 
-Web Layer (Flask)
-Handles routes, rendering, busy-state gating, and UI selectors.
+The file dependency.svg shows module-level dependencies generated with pydeps.
 
-ETL Layer
-Scrapes external data, cleans/normalizes content, and loads database records.
+⸻
 
-Database Layer (PostgreSQL)
-Stores applicant records and supports analysis queries.
+Security Notes
+	•	Uses a least-privilege PostgreSQL user
+	•	No hard-coded credentials
+	•	Parameterized SQL throughout
+	•	No dynamic SQL from user input
+	•	Database schema creation is separated from runtime execution
 
-Query Layer
-Aggregates database results into analysis cards rendered by Flask.
+⸻
 
----
+Why Packaging Matters
 
-Sphinx Documentation
+This project includes a setup.py so it can be installed as a package.
 
-Documentation source:
-
-    module_4/docs/
-
-Build locally:
-
-    cd docs
-    make html
-
-Open:
-
-    docs/build/html/index.html
-
-Documentation includes:
-
-• Overview & setup guide
-• Architecture explanation
-• API autodoc reference
-• Testing guide
-• Operational Notes (busy-state policy, idempotency, troubleshooting)
-
-Published documentation online:
-
-    https://gradcafe-ziran.readthedocs.io/en/latest/
+Benefits:
+	•	Imports behave consistently across local runs, tests, and CI
+	•	Supports editable installs (pip install -e .)
+	•	Eliminates path-based “works on my machine” issues
+	•	Enables tools like uv to sync environments reliably
 
 ---
-
-GitHub Actions CI
-
-Automated CI runs pytest with PostgreSQL service container and coverage enforcement.
-
----
-
-Assignment Deliverables
-
-The repository includes all required Module 4 deliverables:
-
-✔ SSH GitHub repository containing full project source  
-✔ README located under module_4  
-✔ requirements.txt under module_4  
-✔ Fully marked pytest test suite under module_4/tests  
-✔ Sphinx documentation project under module_4/docs  
-✔ Generated Sphinx HTML documentation under module_4/docs/build  
-✔ PostgreSQL integration and ETL pipeline implementation  
-✔ 100% coverage proof via coverage_summary.txt  
-✔ GitHub Actions CI pipeline configuration (.github/workflows/tests.yml)
-
-Proof Deliverables
-
-• actions_success.png — screenshot showing successful GitHub Actions CI run
-• rtd_build_success.png — screenshot confirming ReadTheDocs build completed successfully
-• rtd_published_site.png — screenshot showing live published Sphinx documentation
 
 Live Sphinx documentation:
 
