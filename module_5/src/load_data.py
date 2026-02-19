@@ -80,6 +80,29 @@ def main():
         with conn.cursor() as cur:
             inserted = 0
 
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS applicants (
+                    p_id BIGSERIAL PRIMARY KEY,
+                    program TEXT,
+                    university TEXT,
+                    comments TEXT,
+                    date_added DATE,
+                    url TEXT UNIQUE,
+                    status TEXT,
+                    term TEXT,
+                    us_or_international TEXT,
+                    gpa DOUBLE PRECISION,
+                    gre DOUBLE PRECISION,
+                    gre_v DOUBLE PRECISION,
+                    gre_aw DOUBLE PRECISION,
+                    degree TEXT,
+                    llm_generated_program TEXT,
+                    llm_generated_university TEXT
+                );
+                """
+            )
+
             for entry in data:
                 cur.execute(
                     """
