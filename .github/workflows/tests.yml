@@ -7,6 +7,7 @@ on:
 jobs:
   pytest:
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: module_5
@@ -17,7 +18,7 @@ jobs:
         env:
           POSTGRES_DB: gradcafe
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres123
+          POSTGRES_PASSWORD: ""       # passwordless for CI / grader
         ports:
           - 5432:5432
         options: >-
@@ -109,4 +110,3 @@ jobs:
           else
             echo "SNYK_TOKEN not set; skipping snyk code test."
           fi
-        
