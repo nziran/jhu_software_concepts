@@ -7,20 +7,22 @@ parallel, and writes a raw update dataset for the clean/load ETL pipeline.
 
 Database credentials are read exclusively from environment variables.
 """
+
+from __future__ import annotations
+
 import json
-import re
-import time
 import os
+import re
 import socket
-from datetime import datetime, timezone
+import time
 import urllib.request as urllib_request
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from datetime import datetime, timezone
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
-from bs4 import BeautifulSoup
 import psycopg
-
+from bs4 import BeautifulSoup
 
 
 # -----------------------------
@@ -41,7 +43,7 @@ def load_existing_urls_from_db() -> set[str]:
     - each /result/<id> URL is canonicalized
     - if it already exists in the database, it is skipped
     """
-    urls = set()
+    urls: set[str] = set()
     with psycopg.connect(
         host=os.getenv("DB_HOST"),
         port=os.getenv("DB_PORT"),
@@ -49,7 +51,6 @@ def load_existing_urls_from_db() -> set[str]:
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASSWORD"),
     ) as conn:
-
         with conn.cursor() as cur:
             cur.execute("SELECT url FROM applicants WHERE url IS NOT NULL;")
             for (u,) in cur.fetchall():
@@ -72,7 +73,7 @@ DELAY_BETWEEN_SURVEY_PAGES_S = 0.25
 
 # /result/<id> detail scraping (parallel)
 FETCH_DETAILS = True
-MAX_WORKERS = 8          # moderate concurrency to reduce throttling risk
+MAX_WORKERS = 8  # moderate concurrency to reduce throttling risk
 RETRIES = 3
 BACKOFF_S = 1.5
 
@@ -88,6 +89,7 @@ def _fetch_html(url: str, timeout: int = TIMEOUT_S) -> str:
     req = urllib_request.Request(url, headers={"User-Agent": USER_AGENT})
     with urllib_request.urlopen(req, timeout=timeout) as resp:
         return resp.read().decode("utf-8", errors="ignore")
+
 
 def _safe_fetch_html(url: str) -> str | None:
     """
@@ -108,9 +110,17 @@ def _safe_fetch_html(url: str) -> str | None:
 # -----------------------------
 # These are labels that sometimes appear in parsed text where values should be.
 LABEL_GARBAGE = {
-    "GRE General:", "GRE Verbal:", "Analytical Writing:", "Notes",
-    "Undergrad GPA", "Degree Type", "Degree's Country of Origin",
-    "Timeline", "Admissions", "Results", "Logo"
+    "GRE General:",
+    "GRE Verbal:",
+    "Analytical Writing:",
+    "Notes",
+    "Undergrad GPA",
+    "Degree Type",
+    "Degree's Country of Origin",
+    "Timeline",
+    "Admissions",
+    "Results",
+    "Logo",
 }
 
 
@@ -142,7 +152,7 @@ def _canonical_result_url(url: str | None) -> str | None:
 
         clean = clean._replace(scheme=scheme, netloc=netloc)
         return clean.geturl()
-    except Exception:
+    except (TypeError, ValueError):
         return url
 
 
@@ -152,8 +162,8 @@ def _valid_result_url(url: str | None) -> bool:
         return False
     try:
         p = urlparse(url)
-        return (p.netloc.endswith("thegradcafe.com") and p.path.startswith("/result/"))
-    except Exception:
+        return p.netloc.endswith("thegradcafe.com") and p.path.startswith("/result/")
+    except (TypeError, ValueError):
         return False
 
 
@@ -207,9 +217,7 @@ def _degree_level(degree_type: str | None) -> str | None:
         return None
     t = degree_type.strip().lower()
 
-    if any(
-    x in t
-    for x in [
+    phd_markers = [
         "phd",
         "dphil",
         "doctor",
@@ -221,11 +229,12 @@ def _degree_level(degree_type: str | None) -> str | None:
         "jd",
         "dds",
         "dmd",
-        ]
-    ):
+    ]
+    if any(x in t for x in phd_markers):
         return "PhD"
 
-    if "master" in t or re.search(r"\b(ma|ms|mfa|meng|mpa|mpp|mph|msc|mme|msw|mha)\b", t):
+    masters_re = r"\b(ma|ms|mfa|meng|mpa|mpp|mph|msc|mme|msw|mha)\b"
+    if "master" in t or re.search(masters_re, t):
         return "Masters"
 
     return None
@@ -263,11 +272,6 @@ def _parse_decision(decision_text: str | None) -> tuple[str | None, str | None, 
 
     Returns:
       (status, accepted_date, rejected_date)
-
-    Examples:
-      "Accepted on 29 Jan" -> status="Accepted", accepted_date="29 Jan"
-      "Rejected on 28 Jan" -> status="Rejected", rejected_date="28 Jan"
-      "Waitlisted on ..."  -> status="Waitlisted"
     """
     if not decision_text:
         return None, None, None
@@ -294,7 +298,10 @@ def _parse_decision(decision_text: str | None) -> tuple[str | None, str | None, 
     return _normalize_none(status), accepted_date, rejected_date
 
 
-def _parse_survey_page(html: str, source_url: str) -> list[dict]:
+def _parse_survey_page(  # pylint: disable=too-many-locals
+    html: str,
+    source_url: str,
+) -> list[dict]:
     """
     Parse a survey list page and return a list of raw records.
     Note: detail fields (GPA/GRE/etc.) are filled later from /result/<id>.
@@ -329,21 +336,17 @@ def _parse_survey_page(html: str, source_url: str) -> list[dict]:
                 "applicant_status": status,
                 "accepted_date": accepted_date,
                 "rejected_date": rejected_date,
-
                 # Filled from detail pages later
                 "start_term": None,
                 "start_year": None,
-
                 # Stored as a raw boolean; cleaned later into "American"/"International"
                 "is_international": None,
-
                 "gre_total": None,
                 "gre_v": None,
                 "gre_aw": None,
                 "degree": None,
                 "degree_level": None,
                 "gpa": None,
-
                 "source_url": source_url,
                 "scraped_at": scraped_at_iso,
             }
@@ -355,16 +358,9 @@ def _parse_survey_page(html: str, source_url: str) -> list[dict]:
 # -----------------------------
 # Detail page parsing (/result/<id>)
 # -----------------------------
-def _parse_result_page(entry_url: str) -> dict:
+def _parse_result_page(entry_url: str) -> dict:   # pylint: disable=too-many-locals
     """
     Fetch and parse a single /result/<id> page and return detail fields.
-
-    Output is intentionally limited to fields that are merged into the raw record:
-      - degree / degree_level
-      - is_international (derived from origin)
-      - gpa, gre_total, gre_v, gre_aw
-      - detail_comments (to optionally replace list-page comments)
-      - start_term / start_year (if present)
     """
     html = _safe_fetch_html(entry_url)
     if not html:
@@ -384,8 +380,6 @@ def _parse_result_page(entry_url: str) -> dict:
     soup = BeautifulSoup(html, "html.parser")
     lines = soup.get_text("\n", strip=True).splitlines()
 
-    # Helper: GradCafe result pages are label/value sequences in the full text,
-    # so we search for a label and read the next line as the value.
     def get_after(label: str) -> str | None:
         for i, ln in enumerate(lines):
             if ln.strip() == label and i + 1 < len(lines):
@@ -399,11 +393,9 @@ def _parse_result_page(entry_url: str) -> dict:
     if notes and notes.strip() in LABEL_GARBAGE:
         notes = None
 
-    # These may be missing on many entries; keep None if absent
     start_term = _normalize_none(get_after("Term"))
     start_year = _normalize_none(get_after("Year"))
 
-    # Metric extraction: strip placeholders, drop label artifacts, then parse numbers
     gpa_raw = _clean_bad_label_values(_zero_to_none(get_after("Undergrad GPA")))
     gre_total_raw = _clean_bad_label_values(_zero_to_none(get_after("GRE General:")))
     gre_v_raw = _clean_bad_label_values(_zero_to_none(get_after("GRE Verbal:")))
@@ -414,9 +406,6 @@ def _parse_result_page(entry_url: str) -> dict:
     gre_v = _extract_int(gre_v_raw)
     gre_aw = _extract_float(gre_aw_raw)
 
-    # Convert origin into a strict boolean:
-    # - "American" -> False
-    # - anything else (non-empty) -> True
     is_international = None
     if origin:
         is_international = origin.strip().lower() != "american"
@@ -453,7 +442,10 @@ def load_data(path: str = UPDATE_OUTPUT_JSON) -> list[dict]:
 # -----------------------------
 # Parallel detail fetch for a subset of records
 # -----------------------------
-def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple[int, int]:
+def _fetch_details_for_indices(  # pylint: disable=too-many-locals
+    records: list[dict],
+    indices: list[int],
+) -> tuple[int, int]:
     """
     Fetch /result/<id> detail pages in parallel for only the specified record indices.
 
@@ -474,25 +466,22 @@ def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple
     failed = 0
 
     with ThreadPoolExecutor(max_workers=MAX_WORKERS) as ex:
-        # Map each future back to its record index and URL
         future_map = {ex.submit(_parse_result_page, url): (i, url) for (i, url) in tasks}
 
         for fut in as_completed(future_map):
             i, url = future_map[fut]
             try:
                 extra = fut.result(timeout=DETAIL_FUTURE_TIMEOUT_S)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 failed += 1
                 print(f"[details worker error] {url} :: {e}")
                 continue
 
             r = records[i]
 
-            # Prefer the detail "Notes" over list-page comments when available
             if extra.get("detail_comments"):
                 r["comments"] = extra["detail_comments"]
 
-            # Overwrite the detail fields in the raw record
             for k in [
                 "degree",
                 "degree_level",
@@ -505,10 +494,8 @@ def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple
             ]:
                 r[k] = extra.get(k)
 
-            # Store international status as raw boolean
             r["is_international"] = extra.get("is_international")
 
-            # Final safety cleanup for numeric-ish fields
             for k in ["gpa", "gre_total", "gre_v", "gre_aw"]:
                 r[k] = _clean_bad_label_values(r.get(k))
 
@@ -520,25 +507,20 @@ def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple
 # -----------------------------
 # Main scrape pipeline (pull NEW rows only)
 # -----------------------------
-def scrape_data(resume: bool = True) -> None:
+def scrape_data(resume: bool = True) -> None:  # pylint: disable=too-many-locals,too-many-branches,too-many-statements
     """
     Scrape survey pages from newest to older, collecting only entries that are
     not already present in Postgres. Optionally fetch detail pages in chunks.
     """
+    _ = resume  # keep signature stable for callers/tests
+
     existing_urls = load_existing_urls_from_db()
     print(f"[db] loaded {len(existing_urls)} existing urls from postgres")
 
-    # New records found during this run
     records: list[dict] = []
-
-    # In-memory duplicate tracking begins with database URLs
     seen_urls: set[str] = set(existing_urls)
-
-    # Track which newly-added records still need detail fetching
     chunk_new_indices: list[int] = []
     total_failed_details = 0
-
-    # Early stop tracking
     pages_with_no_new = 0
 
     try:
@@ -560,8 +542,6 @@ def scrape_data(resume: bool = True) -> None:
 
                 if not _valid_result_url(u):
                     continue
-
-                # Skip rows already in DB (or already seen during this run)
                 if u in seen_urls:
                     continue
 
@@ -575,7 +555,6 @@ def scrape_data(resume: bool = True) -> None:
                 f"chunk_pending={len(chunk_new_indices)}"
             )
 
-            # If we hit consecutive pages with no new rows, stop scanning older pages
             if added == 0:
                 pages_with_no_new += 1
             else:
@@ -586,9 +565,12 @@ def scrape_data(resume: bool = True) -> None:
                     f"[early stop] {STOP_AFTER_PAGES_WITH_NO_NEW} consecutive pages "
                     "with no new rows. Stopping."
                 )
-                # Before stopping, fetch details for any remaining new rows in this chunk
+
                 if FETCH_DETAILS and chunk_new_indices:
-                    print(f"[details] early-stop final fetch for {len(chunk_new_indices)} rows ...")
+                    print(
+                        f"[details] early-stop final fetch for "
+                        f"{len(chunk_new_indices)} rows ..."
+                    )
                     updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
                     total_failed_details += failed
                     print(f"[details] early-stop done: updated={updated}, failed={failed}")
@@ -599,23 +581,14 @@ def scrape_data(resume: bool = True) -> None:
 
                 break
 
-            # Chunk boundary: fetch details for accumulated new rows
-            if (
-                FETCH_DETAILS
-                and (page % CHUNK_SURVEY_PAGES == 0)
-                and chunk_new_indices
-            ):
+            if FETCH_DETAILS and (page % CHUNK_SURVEY_PAGES == 0) and chunk_new_indices:
                 print(
                     f"[details] fetching details for last "
                     f"{len(chunk_new_indices)} new rows "
                     f"(workers={MAX_WORKERS}) ..."
                 )
 
-                updated, failed = _fetch_details_for_indices(
-                    records,
-                    chunk_new_indices,
-                )
-
+                updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
                 total_failed_details += failed
 
                 print(
@@ -625,11 +598,9 @@ def scrape_data(resume: bool = True) -> None:
                 )
 
                 chunk_new_indices = []
-
                 save_data(records, UPDATE_OUTPUT_JSON)
                 print(f"[checkpoint] saved {len(records)} rows -> {UPDATE_OUTPUT_JSON}")
 
-            # If detail fetching is disabled, still checkpoint on the same schedule
             if page % CHUNK_SURVEY_PAGES == 0 and not FETCH_DETAILS:
                 save_data(records, UPDATE_OUTPUT_JSON)
                 print(f"[checkpoint] saved {len(records)} rows -> {UPDATE_OUTPUT_JSON}")
@@ -637,12 +608,10 @@ def scrape_data(resume: bool = True) -> None:
             time.sleep(DELAY_BETWEEN_SURVEY_PAGES_S)
 
     except KeyboardInterrupt:
-        # Save partial results on Ctrl-C so progress isn't lost
         print("\n[interrupt] Ctrl-C received. Saving update data...")
         save_data(records, UPDATE_OUTPUT_JSON)
         print(f"[interrupt] saved {len(records)} rows -> {UPDATE_OUTPUT_JSON}")
 
-    # Final detail fetch for any records still pending detail extraction
     if FETCH_DETAILS and chunk_new_indices:
         print(f"[details] final fetch for remaining {len(chunk_new_indices)} rows ...")
         updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
@@ -653,13 +622,26 @@ def scrape_data(resume: bool = True) -> None:
             f"total_failed_details={total_failed_details}"
         )
 
-    # Defensive schema: guarantee keys exist even if some pages were missing fields
     required_keys = [
-        "program_name_raw", "university_raw", "comments", "date_posted", "entry_url",
-        "applicant_status", "accepted_date", "rejected_date",
-        "start_term", "start_year", "is_international",
-        "gre_total", "gre_v", "gre_aw", "degree_level", "degree", "gpa",
-        "source_url", "scraped_at",
+        "program_name_raw",
+        "university_raw",
+        "comments",
+        "date_posted",
+        "entry_url",
+        "applicant_status",
+        "accepted_date",
+        "rejected_date",
+        "start_term",
+        "start_year",
+        "is_international",
+        "gre_total",
+        "gre_v",
+        "gre_aw",
+        "degree_level",
+        "degree",
+        "gpa",
+        "source_url",
+        "scraped_at",
     ]
     for r in records:
         for k in required_keys:
@@ -671,5 +653,4 @@ def scrape_data(resume: bool = True) -> None:
 
 
 if __name__ == "__main__":
-    # Pulls only NEW GradCafe entries (de-duped against Postgres URLs)
     scrape_data()
