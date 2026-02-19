@@ -35,6 +35,12 @@ jobs:
       DB_PASSWORD: ""
       PYTHONPATH: .
 
+      PGHOST: localhost
+      PGPORT: 5432
+      PGDATABASE: gradcafe
+      PGUSER: app_user
+      PGPASSWORD: ""
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
