@@ -31,14 +31,14 @@ jobs:
       DB_HOST: localhost
       DB_PORT: 5432
       DB_NAME: gradcafe
-      DB_USER: app_user
+      DB_USER: postgres
       DB_PASSWORD: ""
       PYTHONPATH: .
 
       PGHOST: localhost
       PGPORT: 5432
       PGDATABASE: gradcafe
-      PGUSER: app_user
+      PGUSER: postgres
       PGPASSWORD: ""
 
     steps:
