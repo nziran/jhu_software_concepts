@@ -1,5 +1,3 @@
-"""Tests for /pull-data and /update-analysis button endpoints in src.app."""
-
 import os
 import subprocess
 
@@ -26,7 +24,7 @@ def test_post_pull_data_returns_202_json_when_not_busy(monkeypatch, client):
     """
     started = {"called": False}
 
-    class DummyThread:  # pylint: disable=too-few-public-methods
+    class DummyThread:
         def __init__(self, target=None, daemon=None):
             self.target = target
             self.daemon = daemon
@@ -56,7 +54,7 @@ def test_post_pull_data_returns_409_when_busy(monkeypatch, client):
 
     started = {"called": False}
 
-    class DummyThread:  # pylint: disable=too-few-public-methods
+    class DummyThread:
         def __init__(self, target=None, daemon=None):
             self.target = target
             self.daemon = daemon
@@ -106,11 +104,7 @@ def test_post_update_analysis_returns_409_when_busy(monkeypatch, client):
 
     # If update ran, it would call get_analysis_results; ensure it doesn't
     called = {"ran": False}
-    monkeypatch.setattr(
-        appmod,
-        "get_analysis_results",
-        lambda: called.__setitem__("ran", True),
-    )
+    monkeypatch.setattr(appmod, "get_analysis_results", lambda: called.__setitem__("ran", True))
 
     resp = client.post("/update-analysis", headers={"Accept": "application/json"})
 
@@ -146,9 +140,8 @@ def test_pull_data_failure_sets_message_and_does_not_write_db(client, monkeypatc
 
     captured = {"target": None, "started": False}
 
-    class CaptureThread:  # pylint: disable=too-few-public-methods
+    class CaptureThread:
         """Thread stub that captures the target but does NOT run it in start()."""
-
         def __init__(self, target=None, daemon=None):
             captured["target"] = target
             self.daemon = daemon
@@ -170,11 +163,10 @@ def test_pull_data_failure_sets_message_and_does_not_write_db(client, monkeypatc
     assert resp.status_code == 202
     assert resp.get_json() == {"ok": True}
     assert captured["started"] is True
+    assert callable(captured["target"])
 
-    target = captured["target"]
-    assert callable(target)
-    target_callable = target  # type: ignore[assignment]
-    target_callable()  # pylint: disable=not-callable
+    # 2) Now run the captured "background" work AFTER the request lock is released
+    captured["target"]()
 
     assert appmod.job_running is False
     assert "Update failed" in appmod.job_last_message

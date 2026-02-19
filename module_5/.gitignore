@@ -4,3 +4,4 @@ applicant_data_update.json
 cleaned_applicant_data_update.jsonsrc/update_job.log
 src/update_job.log
 cleaned_applicant_data_update.json
+.env.example

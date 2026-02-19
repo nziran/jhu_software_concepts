@@ -1,7 +1,4 @@
-"""Tests for analysis page formatting and percentage rendering."""
-
 import re
-
 import pytest
 
 
@@ -25,5 +22,6 @@ def test_percentages_are_two_decimals(client):
     percents = re.findall(r"\b\d+\.\d+%\b", html)
 
     # If your page currently renders zero percentages sometimes, this can be empty.
+    # In that case we’ll force the analysis output in a later step.
     for p in percents:
         assert re.match(r"^\d+\.\d{2}%$", p), f"Bad percent format: {p}"

@@ -1,5 +1,3 @@
-"""Tests for scrape_update helper functions."""
-
 import pytest
 
 from src.scrape_update import (

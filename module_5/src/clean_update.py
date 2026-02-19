@@ -10,13 +10,7 @@
 # - Infer missing start term/year from contextual text when possible
 # - Guarantee a stable output schema
 #
-"""
-Normalize raw scraped GradCafe applicant records into a consistent schema.
-
-This module cleans and standardizes fields, converts invalid values to None,
-infers missing term/year when possible, and writes cleaned output to JSON so the
-raw scrape is preserved.
-"""
+# The cleaned data is written to a new JSON file so raw data is preserved.
 
 import json
 import re
@@ -100,29 +94,30 @@ def _normalize_none(x):
 def _normalize_us_international(v):
     """
     Convert raw international indicators into consistent labels.
-    Outputs:
-      "International", "American", or None
-    Consolidated to a single return statement to satisfy R0911.
-    """
-    result = None
 
+    Output values:
+      "International"
+      "American"
+      None
+    """
     if v in (True, False, None):
         if v is True:
-            result = "International"
-        elif v is False:
-            result = "American"
-        else:
-            result = None
-    elif isinstance(v, str):
-        t = v.strip().lower()
-        if t == "true":
-            result = "International"
-        elif t == "false":
-            result = "American"
-        elif t in ("international", "american"):
-            result = t.title()
+            return "International"
+        if v is False:
+            return "American"
+        return None
 
-    return result
+    if isinstance(v, str):
+        t = v.strip().lower()
+
+        if t == "true":
+            return "International"
+        if t == "false":
+            return "American"
+        if t in ("international", "american"):
+            return t.title()
+
+    return None
 
 
 # -------------------------------------------------------------------
@@ -131,48 +126,49 @@ def _normalize_us_international(v):
 def _extract_start_term_year(*texts: str | None) -> tuple[str | None, str | None]:
     """
     Attempt to infer an applicant's start term/year from surrounding text.
-    Consolidated to a single return to satisfy pylint R0911.
+
+    Only activates when start-related context is detected to avoid false
+    matches from unrelated mentions.
     """
     hay = " ".join(t for t in (texts or []) if t)
     hay = _clean_text(hay)
 
-    ctx_pat = (
-        r"(start|starting|begins?|beginning|program begins|term|semester|"
-        r"matriculat|enroll|enrollment|cohort)"
-    )
+    if not hay:
+        return None, None
 
-    month_pat = (
-        r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|"
-        r"aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
-    )
+    # Only search if enrollment context is present
+    ctx_pat = r"(start|starting|begins?|beginning|program begins|term|semester|matriculat|enroll|enrollment|cohort)"
+    if not re.search(ctx_pat, hay, flags=re.I):
+        return None, None
 
-    term, year = None, None
+    # Season + year pattern
+    m = re.search(r"\b(spring|summer|fall|autumn|winter)\b\W*(20\d{2})\b", hay, flags=re.I)
+    if m:
+        season = m.group(1).lower()
+        year = m.group(2)
+        return _TERM_ALIASES.get(season), year
 
-    if hay and re.search(ctx_pat, hay, flags=re.I):
-        # Season + year pattern
-        m = re.search(r"\b(spring|summer|fall|autumn|winter)\b\W*(20\d{2})\b", hay, flags=re.I)
-        if m:
-            season = m.group(1).lower()
-            term, year = _TERM_ALIASES.get(season), m.group(2)
-        else:
-            # Month + year pattern fallback
-            my = re.search(rf"\b{month_pat}\b\W*(20\d{{2}})\b", hay, flags=re.I)
-            if my:
-                month = my.group(1).lower()
-                term, year = _MONTH_TO_TERM.get(month), my.group(2)
+    # Month + year pattern fallback
+    month_pat = r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    my = re.search(rf"\b{month_pat}\b\W*(20\d{{2}})\b", hay, flags=re.I)
+    if my:
+        month = my.group(1).lower()
+        year = my.group(2)
+        return _MONTH_TO_TERM.get(month), year
 
-    return term, year
+    return None, None
+
 
 # -------------------------------------------------------------------
 # Core cleaning pipeline
 # -------------------------------------------------------------------
-def clean_data(records: list[dict]) -> list[dict]:  # pylint: disable=too-many-locals
+def clean_data(records: list[dict]) -> list[dict]:
     """
     Transform raw scraped records into normalized output rows.
 
     Each record is cleaned, standardized, and validated against a fixed schema.
     """
-    cleaned_rows: list[dict] = []
+    cleaned: list[dict] = []
 
     # Stable output schema guarantees downstream compatibility
     required_keys = [
@@ -211,7 +207,7 @@ def clean_data(records: list[dict]) -> list[dict]:  # pylint: disable=too-many-l
         degree = _normalize_none(r.get("degree"))
 
         gpa_raw = r.get("gpa") if "gpa" in r else r.get("GPA")
-        gpa = _normalize_none(gpa_raw)
+        GPA = _normalize_none(gpa_raw)
 
         source_url = _normalize_none(r.get("source_url"))
         scraped_at = _normalize_none(r.get("scraped_at"))
@@ -246,7 +242,7 @@ def clean_data(records: list[dict]) -> list[dict]:  # pylint: disable=too-many-l
             "gre_aw": gre_aw,
             "degree_level": degree_level,
             "degree": degree,
-            "GPA": gpa,
+            "GPA": GPA,
             "source_url": source_url,
             "scraped_at": scraped_at,
         }
@@ -255,9 +251,9 @@ def clean_data(records: list[dict]) -> list[dict]:  # pylint: disable=too-many-l
         for k in required_keys:
             out.setdefault(k, None)
 
-        cleaned_rows.append(out)
+        cleaned.append(out)
 
-    return cleaned_rows
+    return cleaned
 
 
 # -------------------------------------------------------------------
@@ -293,7 +289,7 @@ def load_data(path: str = INPUT_JSON) -> list[dict]:
 # Script entry point
 # -------------------------------------------------------------------
 if __name__ == "__main__":
-    raw_data = load_data(INPUT_JSON)
-    cleaned_output = clean_data(raw_data)
-    save_data(cleaned_output, OUTPUT_JSON)
-    print(f"Cleaned {len(cleaned_output)} records -> {OUTPUT_JSON}")
+    data = load_data(INPUT_JSON)
+    cleaned = clean_data(data)
+    save_data(cleaned, OUTPUT_JSON)
+    print(f"Cleaned {len(cleaned)} records -> {OUTPUT_JSON}")

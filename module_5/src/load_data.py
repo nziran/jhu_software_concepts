@@ -5,28 +5,17 @@ Loads cleaned/extended GradCafe applicant entries from a JSON file and inserts t
 PostgreSQL table named `applicants`. Uses an "upsert-like" strategy: insert new rows and
 silently skip duplicates based on `url` (unique constraint).
 """
-# pylint: disable=duplicate-code
 
 import json
-import os
 from pathlib import Path
 from datetime import datetime
 
-import psycopg
-
-# ----------------------------
-# Database connection settings
-# ----------------------------
-# Defaults are only used if DATABASE_URL is not set.
-DB_NAME = "gradcafe"
-DB_USER = "ziran"
-DB_HOST = "localhost"
-DB_PORT = 5432
+from src.db import connect_db
 
 # ----------------------------
 # Input data location
 # ----------------------------
-ROOT_DIR = Path(__file__).resolve().parents[1]  # module_4/
+ROOT_DIR = Path(__file__).resolve().parents[1]  # module_5/
 CANDIDATES = [
     ROOT_DIR / "llm_extend_applicant_data.json",
     ROOT_DIR / "src" / "llm_extend_applicant_data.json",
@@ -49,41 +38,21 @@ def parse_date(date_str):
         return None
 
 
-def safe_float(x):  # pylint: disable=duplicate-code
+def safe_float(x):
     """Best-effort conversion to float; returns None if missing/invalid."""
     try:
         if x is None or x == "":
             return None
         return float(x)
-    except (ValueError, TypeError):
+    except Exception:
         return None
-
-
-def _db_params():
-    """
-    Returns either:
-      - DATABASE_URL string if set, else
-      - kwargs dict from PG* env vars with fallbacks.
-    """
-    db_url = os.getenv("DATABASE_URL")
-    if db_url:
-        return db_url
-
-    return {
-        "dbname": os.getenv("PGDATABASE", DB_NAME),
-        "user": os.getenv("PGUSER", DB_USER),
-        "password": os.getenv("PGPASSWORD"),
-        "host": os.getenv("PGHOST", DB_HOST),
-        "port": int(os.getenv("PGPORT", str(DB_PORT))),
-    }
 
 
 def main():
     """Main ETL routine: load JSON -> create table -> insert rows (skip dupes) -> commit."""
     data = json.loads(CLEANED_JSON_PATH.read_text(encoding="utf-8"))
 
-    db = _db_params()
-    with psycopg.connect(db) if isinstance(db, str) else psycopg.connect(**db) as conn:
+    with connect_db() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 """

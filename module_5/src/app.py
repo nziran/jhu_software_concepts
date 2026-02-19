@@ -15,27 +15,24 @@ Long-running update work is executed in a background thread so the web
 interface remains responsive.
 """
 
-import os
-import re
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
 import subprocess
 import sys
 import threading
-from datetime import datetime
 from pathlib import Path
-
-from flask import Flask, flash, jsonify, redirect, render_template, request, url_for
-
 from src.query_data import get_analysis_cards
+import re
+from datetime import datetime
+import os
 
 # Cached analysis results + timestamp
 analysis_cache = []
-analysis_last_updated = None  # pylint: disable=invalid-name
+analysis_last_updated = None
 
 app = Flask(__name__)
-app.secret_key = os.environ["FLASK_SECRET_KEY"]
+app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev") # required for Flask flash messaging
 
-def wants_json() -> bool:
-    """Return True when the client prefers a JSON response over HTML."""
+def wants_json():
     return request.accept_mimetypes.best == "application/json"
 
 
@@ -46,19 +43,19 @@ def wants_json() -> bool:
 # so the UI can block duplicate requests.
 
 job_lock = threading.Lock()
-job_running = False  # pylint: disable=invalid-name
-job_last_message = "No update run yet."  # pylint: disable=invalid-name
+job_running = False
+job_last_message = "No update run yet."
 
-BASE_DIR = Path(__file__).resolve().parents[1]   # .../module_5
+BASE_DIR = Path(__file__).resolve().parent  # .../module_4/src
 
 job_log_path = BASE_DIR / "update_job.log"
 
-SCRIPT_DIR = BASE_DIR / "src"
-SCRAPE_CMD = [sys.executable, str(SCRIPT_DIR / "scrape_update.py")]
-CLEAN_CMD  = [sys.executable, str(SCRIPT_DIR / "clean_update.py")]
-LOAD_CMD   = [sys.executable, str(SCRIPT_DIR / "load_update.py")]
+SCRAPE_CMD = [sys.executable, "-m", "src.scrape_update"]
+CLEAN_CMD  = [sys.executable, "-m", "src.clean_update"]
+LOAD_CMD   = [sys.executable, "-m", "src.load_update"]
 
-def run_update_pipeline():  # pylint: disable=global-statement
+
+def run_update_pipeline():
     """
     Executes the scrape → clean → load pipeline as subprocesses.
 
@@ -66,7 +63,7 @@ def run_update_pipeline():  # pylint: disable=global-statement
     While running, global job state is updated so the UI can prevent
     overlapping update requests.
     """
-    global job_running, job_last_message  # pylint: disable=global-statement
+    global job_running, job_last_message
 
     # Prevent concurrent runs
     with job_lock:
@@ -101,7 +98,7 @@ def run_update_pipeline():  # pylint: disable=global-statement
 
     except subprocess.CalledProcessError:
         job_last_message = "❌ Update failed. Check update_job.log."
-    except Exception as e:  # pylint: disable=broad-exception-caught
+    except Exception as e:
         job_last_message = f"❌ Update crashed: {e}"
     finally:
         with job_lock:
@@ -113,7 +110,9 @@ def run_update_pipeline():  # pylint: disable=global-statement
 # Analysis data retrieval
 # ----------------------------------------------------------
 def get_analysis_results():
-    """Return analysis cards generated from the database for UI rendering."""
+    """
+    Retrieves formatted analysis cards from the database.
+    """
     return get_analysis_cards()
 
 
@@ -122,9 +121,8 @@ def get_analysis_results():
 # ----------------------------------------------------------
 @app.route("/")
 @app.route("/analysis")
-def analysis():  # pylint: disable=global-statement
-    """Render the analysis page (cached cards + update job status)."""
-    global analysis_cache  # pylint: disable=global-statement
+def analysis():
+    global analysis_cache
 
     # Fill cache once on first page load only.
     # This does NOT auto-refresh later; it just prevents a blank page on startup.
@@ -141,10 +139,11 @@ def analysis():  # pylint: disable=global-statement
 
 
 @app.route("/pull-data", methods=["POST"])
-def pull_data():  # pylint: disable=global-statement,global-variable-not-assigned
+def pull_data():
     """
     Starts background update pipeline if not already running.
     """
+    global job_running
 
     with job_lock:
         if job_running:
@@ -163,10 +162,11 @@ def pull_data():  # pylint: disable=global-statement,global-variable-not-assigne
     flash("Pull Data started. Check status below.")
     return redirect(url_for("analysis"))
 
+
+
 @app.route("/update-analysis", methods=["POST"])
-def update_analysis():  # pylint: disable=global-statement
-    """Refresh cached analysis cards unless an update pipeline is currently running."""
-    global analysis_last_updated, analysis_cache  # pylint: disable=global-statement
+def update_analysis():
+    global analysis_last_updated, analysis_cache
 
     if job_running:
         if wants_json():
@@ -174,6 +174,7 @@ def update_analysis():  # pylint: disable=global-statement
         flash("Cannot update analysis while Pull Data is running.")
         return redirect(url_for("analysis"))
 
+    # Refresh cached analysis snapshot
     analysis_cache = get_analysis_results()
     analysis_last_updated = datetime.now()
 
@@ -183,12 +184,13 @@ def update_analysis():  # pylint: disable=global-statement
     flash("Analysis refreshed.")
     return redirect(url_for("analysis"))
 
+
+
 def create_app():
-    """Factory hook for tests/imports to access the Flask app."""
     return app
 
 def main():
-    """Start the Flask dev server unless running under APP_DRY_RUN for tests."""
+    # Allows tests to execute __main__ safely without starting a server
     if os.getenv("APP_DRY_RUN") == "1":
         print("APP_DRY_RUN: skipping app.run()")
         return

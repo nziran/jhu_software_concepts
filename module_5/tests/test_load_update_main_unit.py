@@ -1,14 +1,10 @@
-"""Unit tests for src.load_update.main()."""
-
 import json
-
 import pytest
-
-import src.load_update as lu
-
 
 @pytest.mark.db
 def test_load_update_main_inserts_and_builds_term(monkeypatch, tmp_path, capsys):
+    import src.load_update as lu
+
     # --- make a real temp JSON file for lu.main() to read ---
     records = [
         # term_part + year_part -> "Fall 2026"
@@ -40,7 +36,7 @@ def test_load_update_main_inserts_and_builds_term(monkeypatch, tmp_path, capsys)
             "start_year": "",
             "US/International": "International",
             "GPA": "",
-            "gre_total": "abc",  # safe_float -> None
+            "gre_total": "abc",   # safe_float -> None
             "gre_v": None,
             "gre_aw": "4.0",
             "degree_level": "PhD",
@@ -102,7 +98,7 @@ def test_load_update_main_inserts_and_builds_term(monkeypatch, tmp_path, capsys)
         def __exit__(self, exc_type, exc, tb):
             return False
 
-    def fake_connect(**_kwargs):
+    def fake_connect(**kwargs):
         return FakeConn()
 
     monkeypatch.setattr(lu.psycopg, "connect", fake_connect)
@@ -128,6 +124,8 @@ def test_load_update_main_inserts_and_builds_term(monkeypatch, tmp_path, capsys)
 
 @pytest.mark.db
 def test_load_update_main_raises_when_missing_file(monkeypatch, tmp_path):
+    import src.load_update as lu
+
     missing_path = tmp_path / "does_not_exist.json"
     monkeypatch.setattr(lu, "CLEANED_UPDATE_PATH", missing_path)
 

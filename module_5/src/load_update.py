@@ -1,35 +1,14 @@
-"""
-Load cleaned applicant update records into Postgres.
-
-This module reads the cleaned update JSON, inserts new rows safely, and supports
-idempotent re-runs for the ETL pipeline.
-"""
-# pylint: disable=duplicate-code
+# load_update.py
+# Loads cleaned update records into PostgreSQL, inserting only new rows.
 
 import json
-import os
-from datetime import datetime
 from pathlib import Path
+from datetime import datetime
 
-import psycopg
+from src.db import connect_db
 
 # Cleaned update dataset produced by clean_update.py
 CLEANED_UPDATE_PATH = Path("cleaned_applicant_data_update.json")
-
-
-def _connect():
-    """
-    Create a DB connection using env vars (Step 3: no hard-coded creds).
-    Expected env vars:
-      DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD
-    """
-    return psycopg.connect(
-        host=os.getenv("DB_HOST"),
-        port=os.getenv("DB_PORT"),
-        dbname=os.getenv("DB_NAME"),
-        user=os.getenv("DB_USER"),
-        password=os.getenv("DB_PASSWORD"),
-    )
 
 
 def parse_date(date_str):
@@ -54,7 +33,7 @@ def safe_float(x):
         if x is None or x == "":
             return None
         return float(x)
-    except (TypeError, ValueError):
+    except Exception:
         return None
 
 
@@ -64,6 +43,7 @@ def main():
     into the PostgreSQL applicants table.
     Duplicate URLs are ignored.
     """
+
     # Ensure cleaned update file exists
     if not CLEANED_UPDATE_PATH.exists():
         raise FileNotFoundError(
@@ -71,12 +51,18 @@ def main():
         )
 
     # Load cleaned records
-    data = json.loads(CLEANED_UPDATE_PATH.read_text(encoding="utf-8"))
+    data = json.loads(
+        CLEANED_UPDATE_PATH.read_text(encoding="utf-8")
+    )
+
     inserted = 0
 
-    with _connect() as conn:
+    # Open database connection
+    with connect_db() as conn:
         with conn.cursor() as cur:
+
             for entry in data:
+
                 # Build a valid term string only when meaningful data exists
                 term_part = entry.get("start_term")
                 year_part = entry.get("start_year")
@@ -110,22 +96,29 @@ def main():
                         "program": entry.get("program"),
                         "university": entry.get("university"),
                         "comments": entry.get("comments"),
-                        "date_added": parse_date(entry.get("date_posted")),
+                        "date_added": parse_date(
+                            entry.get("date_posted")
+                        ),
                         "url": entry.get("entry_url"),
                         "status": entry.get("applicant_status"),
                         "term": term_value,
-                        "us_or_international": entry.get("US/International"),
+                        "us_or_international": entry.get(
+                            "US/International"
+                        ),
                         "gpa": safe_float(entry.get("GPA")),
                         "gre": safe_float(entry.get("gre_total")),
                         "gre_v": safe_float(entry.get("gre_v")),
                         "gre_aw": safe_float(entry.get("gre_aw")),
-                        "degree": entry.get("degree_level") or entry.get("degree"),
+                        "degree": entry.get("degree_level")
+                        or entry.get("degree"),
+
                         # No LLM processing for update records
                         "llm_generated_program": None,
                         "llm_generated_university": None,
                     },
                 )
 
+                # Count only successful inserts
                 if cur.rowcount == 1:
                     inserted += 1
 

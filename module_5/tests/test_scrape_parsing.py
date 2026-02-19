@@ -1,13 +1,7 @@
-"""
-Tests for scrape_update parsing and persistence helpers.
-"""
-
+import json
 import pytest
 
 import src.scrape_update as su
-
-
-# pylint: disable=protected-access
 
 
 @pytest.mark.analysis
@@ -64,9 +58,7 @@ def test_parse_survey_page_extracts_rows_and_urls():
     assert records[0]["program_name_raw"] == "Computer Science"
     assert records[0]["applicant_status"] == "Accepted"
     assert records[0]["accepted_date"] == "29 Jan"
-    assert records[0]["entry_url"].startswith(
-        "https://www.thegradcafe.com/result/"
-    )
+    assert records[0]["entry_url"].startswith("https://www.thegradcafe.com/result/")
 
     assert records[1]["applicant_status"].lower().startswith("rejected")
     assert records[1]["rejected_date"] == "28 Jan"
@@ -77,12 +69,7 @@ def test_save_and_load_data_round_trip(tmp_path, monkeypatch):
     out = tmp_path / "update.json"
     monkeypatch.setattr(su, "UPDATE_OUTPUT_JSON", str(out))
 
-    rows = [
-        {
-            "entry_url": "https://www.thegradcafe.com/result/1",
-            "program_name_raw": "CS",
-        }
-    ]
+    rows = [{"entry_url": "https://www.thegradcafe.com/result/1", "program_name_raw": "CS"}]
     su.save_data(rows, out_path=str(out))
 
     loaded = su.load_data(path=str(out))

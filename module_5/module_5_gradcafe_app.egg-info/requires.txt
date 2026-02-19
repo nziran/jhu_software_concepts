@@ -1,4 +1,0 @@
-Flask
-psycopg[binary]
-beautifulsoup4
-requests

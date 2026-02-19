@@ -1,13 +1,10 @@
-"""Minimal entry-point test for src.app (Module 5)."""
-
+import os
 import runpy
-
 import pytest
 
 
 @pytest.mark.web
 def test_app_main_guard_runs_without_starting_server(monkeypatch, capsys):
-    """Ensure __main__ guard runs without starting the Flask server."""
     monkeypatch.setenv("APP_DRY_RUN", "1")
 
     # Execute src.app as if "python -m src.app"
