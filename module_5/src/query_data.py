@@ -6,7 +6,6 @@ and returns results formatted as “analysis cards” (id/question/answer dicts)
 Analysis web page (and also supports printing them from CLI).
 """
 import os
-import psycopg
 from src.db import connect_db
 
 def _db_params():
@@ -19,15 +18,15 @@ def _db_params():
     if db_url:
         return db_url
 
-    return dict(
-        dbname=os.getenv("DB_NAME", os.getenv("PGDATABASE", "gradcafe")),
-        user=os.getenv("DB_USER", os.getenv("PGUSER", "ziran")),
-        password=os.getenv("DB_PASSWORD", os.getenv("PGPASSWORD")),
-        host=os.getenv("DB_HOST", os.getenv("PGHOST", "localhost")),
-        port=int(os.getenv("DB_PORT", os.getenv("PGPORT", "5432"))),
-    )
+    return {
+            "dbname": os.getenv("DB_NAME", os.getenv("PGDATABASE", "gradcafe")),
+            "user": os.getenv("DB_USER", os.getenv("PGUSER", "ziran")),
+            "password": os.getenv("DB_PASSWORD", os.getenv("PGPASSWORD")),
+            "host": os.getenv("DB_HOST", os.getenv("PGHOST", "localhost")),
+            "port": int(os.getenv("DB_PORT", os.getenv("PGPORT", "5432"))),
+    }
 
-def get_analysis_cards():
+def get_analysis_cards():  # pylint: disable=too-many-locals
     """
     Runs a curated set of analysis queries and returns them as a list of dicts.
     """
@@ -63,7 +62,10 @@ def get_analysis_cards():
             cards.append(
                 {
                     "id": "Q1",
-                    "question": "How many entries do you have in your database who have applied for Fall 2026?",
+                    "question": (
+                        "How many entries are in the database from applicants "
+                        "who applied for Fall 2026?"
+                    ),
                     "answer": str(q1),
                 }
             )
@@ -89,7 +91,10 @@ def get_analysis_cards():
             cards.append(
                 {
                     "id": "Q2",
-                    "question": "What percentage of entries are from international students (not American or Other) (to two decimal places)?",
+                    "question": (
+                        "What percentage of entries are from international students "
+                        "(not American or Other) (to two decimal places)?"
+                    ),
                     "answer": f"{pct_intl:.2f}%",
                 }
             )
@@ -118,7 +123,10 @@ def get_analysis_cards():
             cards.append(
                 {
                     "id": "Q3",
-                    "question": "What is the average GPA, GRE (Total), GRE (Section), and GRE AW of applicants who provide these metrics?",
+                    "question": (
+                        "What is the average GPA, GRE (Total), GRE (Section), "
+                        "and GRE AW of applicants who provide these metrics?"
+                    ),
                     "answer": (
                         f"Avg GPA: {_fmt(avg_gpa, '.3f')}, "
                         f"Avg GRE Total: {_fmt(avg_gre_total, '.2f')}, "
@@ -185,7 +193,10 @@ def get_analysis_cards():
             cards.append(
                 {
                     "id": "Q5",
-                    "question": "What percent of entries for Fall 2026 are Acceptances (to two decimal places)?",
+                    "question": (
+                        "What percent of entries for Fall 2026 are Acceptances "
+                        "(to two decimal places)?"
+                    ),
                     "answer": f"{pct_accept:.2f}%",
                 }
             )
@@ -207,7 +218,10 @@ def get_analysis_cards():
             cards.append(
                 {
                     "id": "Q6",
-                    "question": "What is the average GPA of applicants who applied for Fall 2026 who are Acceptances?",
+                   "question": (
+                        "What is the average GPA of applicants who applied for Fall 2026 "
+                        "who are Acceptances?"
+                    ),
                     "answer": "N/A" if q6 is None else f"{q6:.2f}",
                 }
             )
@@ -254,7 +268,10 @@ def get_analysis_cards():
             cards.append(
                 {
                     "id": "Q7",
-                    "question": "How many entries are from applicants who applied to JHU for a masters degree in Computer Science?",
+                   "question": (
+                        "How many entries are from applicants who applied to JHU for a "
+                        "master’s degree in Computer Science?"
+                    ),
                     "answer": str(q7),
                 }
             )
@@ -295,7 +312,11 @@ def get_analysis_cards():
             cards.append(
                 {
                     "id": "Q8",
-                    "question": "How many 2026 acceptances are from applicants who applied to Georgetown, MIT, Stanford, or Carnegie Mellon University for a PhD in Computer Science?",
+                   "question": (
+                        "How many Fall 2026 acceptances are from applicants who applied to "
+                        "Georgetown, MIT, Stanford, or Carnegie Mellon University for a "
+                        "PhD in Computer Science?"
+                    ),
                     "answer": str(q8),
                 }
             )
@@ -315,7 +336,12 @@ def get_analysis_cards():
                     '%admit%'
                 ])
             AND degree ~* '\\m(phd|ph\\.d\\.)\\M'
-            AND llm_generated_program ~* '(computer\\s*science|computer\\s*sci|comp\\s*sci|\\mcs\\M)'
+            AND llm_generated_program ~* '(
+                computer\\s*science
+                |computer\\s*sci
+                |comp\\s*sci
+                |\\mcs\\M
+            )'
             AND (
                     llm_generated_university ILIKE ANY (ARRAY[
                         '%georgetown%',
@@ -332,7 +358,10 @@ def get_analysis_cards():
             cards.append(
                 {
                     "id": "Q9",
-                    "question": "Do the numbers for Q8 change if you use the LLM generated fields (rather than downloaded fields)?",
+                    "question": (
+                        "Do the numbers for Q8 change if you use the LLM generated fields "
+                        "(rather than downloaded fields)?"
+                    ),
                     "answer": f"Using LLM fields, count = {q9}",
                 }
             )
@@ -360,31 +389,31 @@ def get_analysis_cards():
             cards.append(
                 {
                     "id": "Q10",
-                    "question": "Custom Question: What are the top 5 most popular programs applied to?",
+                     "question": (
+                        "Custom Question: What are the top 5 most popular programs "
+                        "applied to?"
+                    ),
                     "answer": top5_programs_str,
                 }
             )
 
-            # ----------------------------
-            # Q11 (custom 2): Top 5 universities for Physics PhD
-            # ----------------------------
-            # This query identifies applications for a Physics PhD and then ranks universities by how frequently they appear. 
-            # The program filter uses a case-insensitive regular expression to match entries that contain both “physics” and “phd” (or “ph.d.”), 
-            # in either order. This allows the query to capture real-world variations such as “Physics PhD,” “PhD Physics,” or “Physics – Ph.D.” 
-            # instead of relying on an exact string match.
-            # Rows with missing or blank university values are excluded so the grouping remains meaningful. 
-            # The remaining rows are grouped by university, counted, sorted from highest to lowest frequency, 
-            # and the top five universities are returned.
+            # Q11: Top 5 universities for Physics PhD
+            # Uses regex to match "physics" + "phd" in any order
+            # Groups by university and returns top 5
             cur.execute(
                 """
-            SELECT university, COUNT(*) AS count
-            FROM applicants
-            WHERE program ~* '(\\mphysics\\M.*\\m(phd|ph\\.d\\.)\\M|\\m(phd|ph\\.d\\.)\\M.*\\mphysics\\M)'
-            AND university IS NOT NULL
-            AND university <> ''
-            GROUP BY university
-            ORDER BY count DESC
-            LIMIT 5;
+                SELECT university, COUNT(*) AS count
+                FROM applicants
+                WHERE program ~* (
+                    '\\mphysics\\M.*\\m(phd|ph\\.d\\.)\\M'
+                    '|' 
+                    '\\m(phd|ph\\.d\\.)\\M.*\\mphysics\\M'
+                )
+                AND university IS NOT NULL
+                AND university <> ''
+                GROUP BY university
+                ORDER BY count DESC
+                LIMIT 5;
                 """
             )
             top5_physics_unis = cur.fetchall()
@@ -394,7 +423,10 @@ def get_analysis_cards():
             cards.append(
                 {
                     "id": "Q11",
-                    "question": "Custom Question: What are the top 5 universities applied to for Physics PhD?",
+                    "question": (
+                        "Custom Question: What are the top 5 universities "
+                        "applied to for Physics PhD?"
+                    ),
                     "answer": top5_physics_unis_str,
                 }
             )
@@ -418,5 +450,5 @@ def main():
 
 
 # Standard entrypoint guard so the file can be imported without executing main().
-if __name__ == "__main__":   
+if __name__ == "__main__":
     main()

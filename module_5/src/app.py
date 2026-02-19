@@ -15,24 +15,27 @@ Long-running update work is executed in a background thread so the web
 interface remains responsive.
 """
 
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
+import os
+import re
 import subprocess
 import sys
 import threading
-from pathlib import Path
-from src.query_data import get_analysis_cards
-import re
 from datetime import datetime
-import os
+from pathlib import Path
+
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
+
+from src.query_data import get_analysis_cards
 
 # Cached analysis results + timestamp
 analysis_cache = []
-analysis_last_updated = None
+analysis_last_updated = None   # pylint: disable=invalid-name
 
 app = Flask(__name__)
 app.secret_key = os.getenv("FLASK_SECRET_KEY", "dev") # required for Flask flash messaging
 
 def wants_json():
+    """Return True if client prefers JSON responses."""
     return request.accept_mimetypes.best == "application/json"
 
 
@@ -43,8 +46,8 @@ def wants_json():
 # so the UI can block duplicate requests.
 
 job_lock = threading.Lock()
-job_running = False
-job_last_message = "No update run yet."
+job_running = False  # pylint: disable=invalid-name
+job_last_message = "No update run yet."  # pylint: disable=invalid-name
 
 BASE_DIR = Path(__file__).resolve().parent  # .../module_4/src
 
@@ -55,7 +58,7 @@ CLEAN_CMD  = [sys.executable, "-m", "src.clean_update"]
 LOAD_CMD   = [sys.executable, "-m", "src.load_update"]
 
 
-def run_update_pipeline():
+def run_update_pipeline():   # pylint: disable=global-statement
     """
     Executes the scrape → clean → load pipeline as subprocesses.
 
@@ -63,7 +66,7 @@ def run_update_pipeline():
     While running, global job state is updated so the UI can prevent
     overlapping update requests.
     """
-    global job_running, job_last_message
+    global job_running, job_last_message  # pylint: disable=global-statement
 
     # Prevent concurrent runs
     with job_lock:
@@ -98,7 +101,7 @@ def run_update_pipeline():
 
     except subprocess.CalledProcessError:
         job_last_message = "❌ Update failed. Check update_job.log."
-    except Exception as e:
+    except Exception as e:   # pylint: disable=broad-exception-caught
         job_last_message = f"❌ Update crashed: {e}"
     finally:
         with job_lock:
@@ -121,8 +124,9 @@ def get_analysis_results():
 # ----------------------------------------------------------
 @app.route("/")
 @app.route("/analysis")
-def analysis():
-    global analysis_cache
+def analysis():  # pylint: disable=global-statement
+    """Render analysis dashboard."""
+    global analysis_cache  # pylint: disable=global-statement
 
     # Fill cache once on first page load only.
     # This does NOT auto-refresh later; it just prevents a blank page on startup.
@@ -139,11 +143,9 @@ def analysis():
 
 
 @app.route("/pull-data", methods=["POST"])
-def pull_data():
-    """
-    Starts background update pipeline if not already running.
-    """
-    global job_running
+def pull_data():  # pylint: disable=global-statement
+    """"Start background update pipeline."""
+    global job_running   # pylint: disable=global-statement,global-variable-not-assigned
 
     with job_lock:
         if job_running:
@@ -165,8 +167,9 @@ def pull_data():
 
 
 @app.route("/update-analysis", methods=["POST"])
-def update_analysis():
-    global analysis_last_updated, analysis_cache
+def update_analysis():  # pylint: disable=global-statement
+    """Refresh cached analysis results."""
+    global analysis_last_updated, analysis_cache  # pylint: disable=global-statement
 
     if job_running:
         if wants_json():
@@ -187,10 +190,11 @@ def update_analysis():
 
 
 def create_app():
+    """Application factory for testing."""
     return app
 
 def main():
-    # Allows tests to execute __main__ safely without starting a server
+    """Run Flask development server."""
     if os.getenv("APP_DRY_RUN") == "1":
         print("APP_DRY_RUN: skipping app.run()")
         return

@@ -1,11 +1,16 @@
-# load_update.py
-# Loads cleaned update records into PostgreSQL, inserting only new rows.
+"""
+Load cleaned GradCafe update records into the PostgreSQL applicants table.
 
+This script reads the cleaned update output and inserts new rows into the database
+while avoiding duplicates (typically by URL). It is part of the module_5 update
+pipeline used by the Flask app.
+"""
 import json
 from pathlib import Path
 from datetime import datetime
-import psycopg 
+import psycopg  # pylint: disable=unused-import
 from src.db import connect_db
+
 
 # Cleaned update dataset produced by clean_update.py
 CLEANED_UPDATE_PATH = Path("cleaned_applicant_data_update.json")
@@ -33,7 +38,7 @@ def safe_float(x):
         if x is None or x == "":
             return None
         return float(x)
-    except Exception:
+    except (OSError, ValueError):
         return None
 
 

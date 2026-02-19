@@ -1,16 +1,13 @@
-# clean_update.py
-#
-# This script takes raw scraped applicant records and normalizes them into a
-# consistent schema suitable for database loading and downstream analysis.
-#
-# Responsibilities:
-# - Remove HTML remnants and normalize text fields
-# - Convert empty/invalid values to None
-# - Standardize international status labels
-# - Infer missing start term/year from contextual text when possible
-# - Guarantee a stable output schema
-#
-# The cleaned data is written to a new JSON file so raw data is preserved.
+"""
+Clean and normalize newly scraped GradCafe applicant records.
+
+This module processes raw update data scraped from GradCafe, standardizes
+fields (dates, GPA/GRE values, terms, degrees), removes malformed entries,
+and writes a cleaned JSON dataset suitable for database insertion.
+
+It is part of the module_5 update pipeline and is designed to be deterministic,
+idempotent, and safe to re-run.
+"""
 
 import json
 import re
@@ -91,7 +88,7 @@ def _normalize_none(x):
 # -------------------------------------------------------------------
 # International status normalization
 # -------------------------------------------------------------------
-def _normalize_us_international(v):
+def _normalize_us_international(v):  # pylint: disable=too-many-return-statements
     """
     Convert raw international indicators into consistent labels.
 
@@ -137,7 +134,10 @@ def _extract_start_term_year(*texts: str | None) -> tuple[str | None, str | None
         return None, None
 
     # Only search if enrollment context is present
-    ctx_pat = r"(start|starting|begins?|beginning|program begins|term|semester|matriculat|enroll|enrollment|cohort)"
+    ctx_pat = (
+        r"(start|starting|begins?|beginning|program begins|term|"
+        r"semester|matriculat|enroll|enrollment|cohort)"
+    )
     if not re.search(ctx_pat, hay, flags=re.I):
         return None, None
 
@@ -149,7 +149,11 @@ def _extract_start_term_year(*texts: str | None) -> tuple[str | None, str | None
         return _TERM_ALIASES.get(season), year
 
     # Month + year pattern fallback
-    month_pat = r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t)?(?:ember)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    month_pat = (
+        r"(jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|"
+        r"jun(?:e)?|jul(?:y)?|aug(?:ust)?|sep(?:t)?(?:ember)?|"
+        r"oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+    )
     my = re.search(rf"\b{month_pat}\b\W*(20\d{{2}})\b", hay, flags=re.I)
     if my:
         month = my.group(1).lower()
@@ -162,7 +166,7 @@ def _extract_start_term_year(*texts: str | None) -> tuple[str | None, str | None
 # -------------------------------------------------------------------
 # Core cleaning pipeline
 # -------------------------------------------------------------------
-def clean_data(records: list[dict]) -> list[dict]:
+def clean_data(records: list[dict]) -> list[dict]:  # pylint: disable=too-many-locals
     """
     Transform raw scraped records into normalized output rows.
 
@@ -207,7 +211,7 @@ def clean_data(records: list[dict]) -> list[dict]:
         degree = _normalize_none(r.get("degree"))
 
         gpa_raw = r.get("gpa") if "gpa" in r else r.get("GPA")
-        GPA = _normalize_none(gpa_raw)
+        gpa = _normalize_none(gpa_raw)
 
         source_url = _normalize_none(r.get("source_url"))
         scraped_at = _normalize_none(r.get("scraped_at"))
@@ -242,7 +246,7 @@ def clean_data(records: list[dict]) -> list[dict]:
             "gre_aw": gre_aw,
             "degree_level": degree_level,
             "degree": degree,
-            "GPA": GPA,
+            "GPA": gpa,
             "source_url": source_url,
             "scraped_at": scraped_at,
         }
@@ -289,7 +293,7 @@ def load_data(path: str = INPUT_JSON) -> list[dict]:
 # Script entry point
 # -------------------------------------------------------------------
 if __name__ == "__main__":
-    data = load_data(INPUT_JSON)
-    cleaned = clean_data(data)
-    save_data(cleaned, OUTPUT_JSON)
-    print(f"Cleaned {len(cleaned)} records -> {OUTPUT_JSON}")
+    raw_records = load_data(INPUT_JSON)
+    cleaned_records = clean_data(raw_records)
+    save_data(cleaned_records, OUTPUT_JSON)
+    print(f"Cleaned {len(cleaned_records)} records -> {OUTPUT_JSON}")

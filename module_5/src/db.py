@@ -17,6 +17,9 @@ import psycopg
 
 
 def connect_db() -> psycopg.Connection[Any]:
+    """
+    Create and return a PostgreSQL database connection using environment variables.
+    """
     db_url = os.getenv("DATABASE_URL")
     if db_url:
         return psycopg.connect(db_url)
@@ -38,4 +41,3 @@ def connect_db() -> psycopg.Connection[Any]:
         kwargs["password"] = password
 
     return psycopg.connect(**kwargs)
-

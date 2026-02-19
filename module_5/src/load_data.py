@@ -5,13 +5,13 @@ Loads cleaned/extended GradCafe applicant entries from a JSON file and inserts t
 PostgreSQL table named `applicants`. Uses an "upsert-like" strategy: insert new rows and
 silently skip duplicates based on `url` (unique constraint).
 """
+# pylint: disable=duplicate-code
 
 import json
 import os
 from pathlib import Path
 from datetime import datetime
 
-import psycopg
 
 from src.db import connect_db
 
@@ -42,14 +42,13 @@ def _db_params():
     if db_url:
         return db_url
 
-    return dict(
-        dbname=os.getenv("PGDATABASE", "gradcafe"),
-        user=os.getenv("PGUSER", "ziran"),
-        password=os.getenv("PGPASSWORD"),
-        host=os.getenv("PGHOST", "localhost"),
-        port=int(os.getenv("PGPORT", "5432")),
-    )
-
+    return {
+        "dbname": os.getenv("PGDATABASE", "gradcafe"),
+        "user": os.getenv("PGUSER", "ziran"),
+        "password": os.getenv("PGPASSWORD"),
+        "host": os.getenv("PGHOST", "localhost"),
+        "port": int(os.getenv("PGPORT", "5432")),
+    }
 
 def parse_date(date_str):
     """Convert a YYYY-MM-DD string into a datetime.date, or return None if invalid."""
@@ -67,7 +66,7 @@ def safe_float(x):
         if x is None or x == "":
             return None
         return float(x)
-    except Exception:
+    except (TypeError, ValueError):
         return None
 
 

@@ -1,9 +1,10 @@
-# scrape_update.py
-# Scrapes the GradCafe survey pages, but only keeps entries that are NOT already
-# present in the Postgres database. For each new entry, it optionally fetches
-# the /result/<id> detail page (GPA/GRE/degree/origin, etc.) in parallel and
-# writes the raw update set to applicant_data_update.json.
+"""
+Scrape and update GradCafe applicant records.
 
+This module fetches new GradCafe entries, retrieves detailed applicant data,
+and writes cleaned updates for ingestion into the PostgreSQL database.
+It is designed to be resilient to partial failures and supports incremental updates.
+"""
 import json
 import re
 import time
@@ -12,10 +13,9 @@ from datetime import datetime, timezone
 import urllib.request as urllib_request
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin, urlparse
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed, TimeoutError as FuturesTimeoutError
 
 from bs4 import BeautifulSoup
-import os
 
 from src.db import connect_db
 
@@ -118,7 +118,7 @@ def _canonical_result_url(url: str | None) -> str | None:
             netloc = "www.thegradcafe.com"
         clean = clean._replace(scheme=scheme, netloc=netloc)
         return clean.geturl()
-    except Exception:
+    except (ValueError, AttributeError):
         return url
 
 
@@ -128,7 +128,7 @@ def _valid_result_url(url: str | None) -> bool:
     try:
         p = urlparse(url)
         return p.netloc.endswith("thegradcafe.com") and p.path.startswith("/result/")
-    except Exception:
+    except (ValueError, AttributeError):
         return False
 
 
@@ -217,7 +217,11 @@ def _parse_decision(decision_text: str | None) -> tuple[str | None, str | None, 
     rejected_date = None
     status = None
 
-    m = re.search(r"^(Accepted|Rejected|Wait listed|Waitlisted)\s+on\s+(.+)$", decision_text, flags=re.I)
+    m = re.search(
+        r"^(Accepted|Rejected|Wait listed|Waitlisted)\s+on\s+(.+)$",
+        decision_text,
+        flags=re.I,
+    )
     if m:
         status = m.group(1).strip().title().replace("Wait Listed", "Waitlisted")
         d = _normalize_none(m.group(2))
@@ -231,7 +235,7 @@ def _parse_decision(decision_text: str | None) -> tuple[str | None, str | None, 
     return _normalize_none(status), accepted_date, rejected_date
 
 
-def _parse_survey_page(html: str, source_url: str) -> list[dict]:
+def _parse_survey_page(html: str, source_url: str) -> list[dict]:  # pylint: disable=too-many-locals
     """
     Parse a survey list page and return a list of raw records.
     Note: detail fields (GPA/GRE/etc.) are filled later from /result/<id>.
@@ -292,7 +296,7 @@ def _parse_survey_page(html: str, source_url: str) -> list[dict]:
 # -----------------------------
 # Detail page parsing (/result/<id>)
 # -----------------------------
-def _parse_result_page(entry_url: str) -> dict:
+def _parse_result_page(entry_url: str) -> dict:  # pylint: disable=too-many-locals
     """
     Fetch and parse a single /result/<id> page and return detail fields.
 
@@ -356,7 +360,7 @@ def _parse_result_page(entry_url: str) -> dict:
     # - anything else (non-empty) -> True
     is_international = None
     if origin:
-        is_international = (origin.strip().lower() != "american")
+        is_international = origin.strip().lower() != "american"
 
     return {
         "degree": degree,
@@ -418,7 +422,11 @@ def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple
             i, url = future_map[fut]
             try:
                 extra = fut.result(timeout=DETAIL_FUTURE_TIMEOUT_S)
-            except Exception as e:
+            except FuturesTimeoutError as e:
+                failed += 1
+                print(f"[details worker timeout] {url} :: {e}")
+                continue
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 failed += 1
                 print(f"[details worker error] {url} :: {e}")
                 continue
@@ -430,9 +438,17 @@ def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple
                 r["comments"] = extra["detail_comments"]
 
             # Overwrite the detail fields in the raw record
-            for k in ["degree", "degree_level", "gpa", "gre_total", "gre_v", "gre_aw", "start_term", "start_year"]:
+            for k in [
+                "degree",
+                "degree_level",
+                "gpa",
+                "gre_total",
+                "gre_v",
+                "gre_aw",
+                "start_term",
+                "start_year",
+            ]:
                 r[k] = extra.get(k)
-
             # Store international status as raw boolean
             r["is_international"] = extra.get("is_international")
 
@@ -448,7 +464,7 @@ def _fetch_details_for_indices(records: list[dict], indices: list[int]) -> tuple
 # -----------------------------
 # Main scrape pipeline (pull NEW rows only)
 # -----------------------------
-def scrape_data(resume: bool = True) -> None:
+def scrape_data(resume: bool = True) -> None:  # pylint: disable=too-many-locals,too-many-branches,too-many-statements,unused-argument
     """
     Scrape survey pages from newest to older, collecting only entries that are
     not already present in Postgres. Optionally fetch detail pages in chunks.
@@ -510,7 +526,11 @@ def scrape_data(resume: bool = True) -> None:
                 pages_with_no_new = 0
 
             if pages_with_no_new >= STOP_AFTER_PAGES_WITH_NO_NEW:
-                print(f"[early stop] {STOP_AFTER_PAGES_WITH_NO_NEW} consecutive pages with no new rows. Stopping.")
+                print(
+                    "[early stop] "
+                    f"{STOP_AFTER_PAGES_WITH_NO_NEW} consecutive pages with no new rows. "
+                    "Stopping."
+                )
 
                 # Before stopping, fetch details for any remaining new rows in this chunk
                 if FETCH_DETAILS and chunk_new_indices:
@@ -527,10 +547,16 @@ def scrape_data(resume: bool = True) -> None:
 
             # Chunk boundary: fetch details for accumulated new rows
             if FETCH_DETAILS and (page % CHUNK_SURVEY_PAGES == 0) and chunk_new_indices:
-                print(f"[details] fetching details for last {len(chunk_new_indices)} new rows (workers={MAX_WORKERS}) ...")
+                print(
+                    f"[details] fetching details for last {len(chunk_new_indices)} new rows "
+                    f"(workers={MAX_WORKERS}) ..."
+                )
                 updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
                 total_failed_details += failed
-                print(f"[details] chunk done: updated={updated}, failed={failed}, total_failed_details={total_failed_details}")
+                print(
+                    f"[details] chunk done: updated={updated}, failed={failed}, "
+                    f"total_failed_details={total_failed_details}"
+                )
                 chunk_new_indices = []
 
                 save_data(records, UPDATE_OUTPUT_JSON)
@@ -554,7 +580,10 @@ def scrape_data(resume: bool = True) -> None:
         print(f"[details] final fetch for remaining {len(chunk_new_indices)} rows ...")
         updated, failed = _fetch_details_for_indices(records, chunk_new_indices)
         total_failed_details += failed
-        print(f"[details] final done: updated={updated}, failed={failed}, total_failed_details={total_failed_details}")
+        print(
+            f"[details] final done: updated={updated}, failed={failed}, "
+            f"total_failed_details={total_failed_details}"
+        )
 
     # Defensive schema: guarantee keys exist even if some pages were missing fields
     required_keys = [
