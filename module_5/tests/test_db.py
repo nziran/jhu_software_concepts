@@ -1,4 +1,5 @@
 import pytest
+pytestmark = pytest.mark.db
 import src.db as dbmod
 
 def test_connect_db_raises_when_required_env_missing(monkeypatch):
