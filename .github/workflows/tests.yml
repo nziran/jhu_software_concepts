@@ -18,7 +18,7 @@ jobs:
         env:
           POSTGRES_DB: gradcafe
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: trust
+          POSTGRES_HOST_AUTH_METHOD: trust
         ports:
           - 5432:5432
         options: >-
@@ -32,7 +32,7 @@ jobs:
       DB_PORT: 5432
       DB_NAME: gradcafe
       DB_USER: app_user
-      DB_PASSWORD: placeholder
+      DB_PASSWORD: ""
       PYTHONPATH: .
 
     steps:
@@ -48,17 +48,22 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install -e .
 
       - name: Initialize database schema + create least-privilege user
         env:
+          DB_HOST: localhost
+          DB_PORT: 5432
+          DB_NAME: gradcafe
           DB_USER: postgres
+          DB_PASSWORD: ""
           PGPASSWORD: ""
         run: |
           # Create tables as superuser
-          python -m src.load_data || true
+          python -m src.load_data
 
           # Create app_user if it does not exist
-          psql "postgresql://postgres:@localhost:5432/gradcafe" -v ON_ERROR_STOP=1 <<'SQL'
+          psql "postgresql://postgres@localhost:5432/gradcafe" -v ON_ERROR_STOP=1 <<'SQL'
           DO $$
           BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user') THEN
@@ -110,4 +115,4 @@ jobs:
           else
             echo "SNYK_TOKEN not set; skipping snyk code test."
           fi
-  
+          
