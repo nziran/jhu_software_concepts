@@ -91,6 +91,11 @@ jobs:
       - name: Run pytest
         run: |
           pytest -m "web or buttons or analysis or db or integration"
+          
+      - name: Install Graphviz
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y graphviz
 
       - name: Generate dependency.svg
         run: |
