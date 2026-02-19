@@ -7,6 +7,7 @@ on:
 jobs:
   pytest:
     runs-on: ubuntu-latest
+
     defaults:
       run:
         working-directory: module_5
@@ -17,7 +18,7 @@ jobs:
         env:
           POSTGRES_DB: gradcafe
           POSTGRES_USER: postgres
-          POSTGRES_PASSWORD: postgres123
+          POSTGRES_PASSWORD: ""
         ports:
           - 5432:5432
         options: >-
@@ -51,13 +52,13 @@ jobs:
       - name: Initialize database schema + create least-privilege user
         env:
           DB_USER: postgres
-          PGPASSWORD: postgres123
+          PGPASSWORD: ""
         run: |
           # Create tables as superuser
           python -m src.load_data || true
 
           # Create app_user if it does not exist
-          psql "postgresql://postgres:postgres123@localhost:5432/gradcafe" -v ON_ERROR_STOP=1 <<'SQL'
+          psql "postgresql://postgres:@localhost:5432/gradcafe" -v ON_ERROR_STOP=1 <<'SQL'
           DO $$
           BEGIN
             IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user') THEN
@@ -109,4 +110,4 @@ jobs:
           else
             echo "SNYK_TOKEN not set; skipping snyk code test."
           fi
-        
+  
