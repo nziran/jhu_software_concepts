@@ -1,13 +1,19 @@
-name: tests
+name: Module 5 CI
 
 on:
   push:
+    paths:
+      - "module_5/**"
+      - ".github/workflows/tests.yml"
   pull_request:
+    paths:
+      - "module_5/**"
+      - ".github/workflows/tests.yml"
 
 jobs:
-  pytest:
+  ci:
     runs-on: ubuntu-latest
-  
+
     defaults:
       run:
         working-directory: module_5
@@ -16,24 +22,29 @@ jobs:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_USER: ziran
-          POSTGRES_PASSWORD: ziran
           POSTGRES_DB: gradcafe
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U ziran -d gradcafe"
+          --health-cmd "pg_isready -U postgres -d gradcafe"
           --health-interval 5s
           --health-timeout 5s
           --health-retries 20
 
     env:
+      # tests/app should use least-priv user
+      DATABASE_URL: postgresql://app_user:app_user_ci_password@localhost:5432/gradcafe
       PGHOST: localhost
       PGPORT: 5432
       PGDATABASE: gradcafe
-      PGUSER: ziran
-      PGPASSWORD: ziran
+      PGUSER: app_user
+      PGPASSWORD: app_user_ci_password
       PYTHONPATH: .
+
+      # Flask needs a secret key for flash()
+      FLASK_SECRET_KEY: ci_dummy_secret_key
 
     steps:
       - name: Checkout
@@ -44,15 +55,51 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install system deps (psql)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client
+
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Initialize database schema
+      - name: Initialize schema + create least-privilege user
+        env:
+          # Run bootstrap as postgres (admin)
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/gradcafe
+          PGUSER: postgres
+          PGPASSWORD: postgres
         run: |
+          # create tables/indexes/etc
           python -m src.load_data
+
+          # create app_user + grant minimum privileges
+          psql "postgresql://postgres:postgres@localhost:5432/gradcafe" -v ON_ERROR_STOP=1 <<'SQL'
+          DO $$
+          BEGIN
+            IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_user') THEN
+              CREATE ROLE app_user LOGIN PASSWORD 'app_user_ci_password';
+            END IF;
+          END
+          $$;
+
+          GRANT CONNECT ON DATABASE gradcafe TO app_user;
+          GRANT USAGE ON SCHEMA public TO app_user;
+
+          -- your app/tests need SELECT/INSERT on applicants
+          GRANT SELECT, INSERT ON TABLE public.applicants TO app_user;
+
+          -- if applicants uses sequences, this prevents "permission denied for sequence"
+          GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO app_user;
+          SQL
+
+      - name: Run pylint (fail under 10)
+        run: |
+          pylint src tests --fail-under=10
 
       - name: Run pytest (marked suite)
         run: |
           pytest -m "web or buttons or analysis or db or integration"
+          
