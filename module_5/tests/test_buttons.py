@@ -1,15 +1,14 @@
-import os
 import subprocess
 
 import psycopg
 import pytest
 
 import src.app as appmod
+from src.db import connect_db
 
 
 def _db_count_applicants() -> int:
-    db_url = os.environ["DATABASE_URL"]
-    with psycopg.connect(db_url) as conn:
+    with connect_db() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) FROM applicants;")
             return int(cur.fetchone()[0])

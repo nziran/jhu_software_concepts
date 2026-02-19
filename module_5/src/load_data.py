@@ -7,10 +7,14 @@ silently skip duplicates based on `url` (unique constraint).
 """
 
 import json
+import os
 from pathlib import Path
 from datetime import datetime
 
+import psycopg
+
 from src.db import connect_db
+
 
 # ----------------------------
 # Input data location
@@ -25,6 +29,25 @@ CLEANED_JSON_PATH = next((p for p in CANDIDATES if p.exists()), None)
 if CLEANED_JSON_PATH is None:
     raise FileNotFoundError(
         "Missing cleaned JSON. Expected one of:\n" + "\n".join(str(p) for p in CANDIDATES)
+    )
+
+
+def _db_params():
+    """
+    Backward-compat helper for tests.
+    If DATABASE_URL is set, return it; otherwise return a fallback dict
+    (tests may assert this structure exists).
+    """
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        return db_url
+
+    return dict(
+        dbname=os.getenv("PGDATABASE", "gradcafe"),
+        user=os.getenv("PGUSER", "ziran"),
+        password=os.getenv("PGPASSWORD"),
+        host=os.getenv("PGHOST", "localhost"),
+        port=int(os.getenv("PGPORT", "5432")),
     )
 
 
@@ -49,34 +72,13 @@ def safe_float(x):
 
 
 def main():
-    """Main ETL routine: load JSON -> create table -> insert rows (skip dupes) -> commit."""
+    """Main ETL routine: load JSON -> insert rows (skip dupes) -> commit."""
     data = json.loads(CLEANED_JSON_PATH.read_text(encoding="utf-8"))
 
+    # IMPORTANT: least-privilege users cannot CREATE TABLE.
+    # The applicants table is assumed to already exist (created during setup).
     with connect_db() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                """
-                CREATE TABLE IF NOT EXISTS applicants (
-                    p_id BIGSERIAL PRIMARY KEY,
-                    program TEXT,
-                    university TEXT,
-                    comments TEXT,
-                    date_added DATE,
-                    url TEXT UNIQUE,
-                    status TEXT,
-                    term TEXT,
-                    us_or_international TEXT,
-                    gpa FLOAT,
-                    gre FLOAT,
-                    gre_v FLOAT,
-                    gre_aw FLOAT,
-                    degree TEXT,
-                    llm_generated_program TEXT,
-                    llm_generated_university TEXT
-                );
-                """
-            )
-
             inserted = 0
 
             for entry in data:

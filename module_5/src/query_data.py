@@ -5,9 +5,27 @@ Runs a set of SQL queries against the `applicants` table in the `gradcafe` Postg
 and returns results formatted as “analysis cards” (id/question/answer dicts) for your
 Analysis web page (and also supports printing them from CLI).
 """
+import os
 import psycopg
 from src.db import connect_db
 
+def _db_params():
+    """
+    Back-compat helper for tests:
+    - If DATABASE_URL is set, return it
+    - else return kwargs dict (can be empty) for psycopg.connect(**kwargs)
+    """
+    db_url = os.getenv("DATABASE_URL")
+    if db_url:
+        return db_url
+
+    return dict(
+        dbname=os.getenv("DB_NAME", os.getenv("PGDATABASE", "gradcafe")),
+        user=os.getenv("DB_USER", os.getenv("PGUSER", "ziran")),
+        password=os.getenv("DB_PASSWORD", os.getenv("PGPASSWORD")),
+        host=os.getenv("DB_HOST", os.getenv("PGHOST", "localhost")),
+        port=int(os.getenv("DB_PORT", os.getenv("PGPORT", "5432"))),
+    )
 
 def get_analysis_cards():
     """

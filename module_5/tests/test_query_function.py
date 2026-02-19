@@ -26,3 +26,16 @@ def test_db_params_fallback(monkeypatch):
 
     assert isinstance(params, dict)
     assert "dbname" in params
+
+@pytest.mark.db
+def test_db_params_uses_database_url(monkeypatch):
+    from src.query_data import _db_params
+
+    monkeypatch.setenv(
+        "DATABASE_URL",
+        "postgresql://someone@localhost:5432/gradcafe"
+    )
+
+    params = _db_params()
+
+    assert params == "postgresql://someone@localhost:5432/gradcafe"

@@ -4,7 +4,7 @@
 import json
 from pathlib import Path
 from datetime import datetime
-
+import psycopg 
 from src.db import connect_db
 
 # Cleaned update dataset produced by clean_update.py
