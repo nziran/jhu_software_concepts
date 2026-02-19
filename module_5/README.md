@@ -197,6 +197,128 @@ Notes
 
 ---
 
+---
+
+## Deliverables Checklist
+
+✔ **Secure SQL refactor**
+- All SQL uses psycopg parameterization (no string-built SQL)
+- Statement construction separated from execution
+- Explicit LIMIT enforced on all queries
+
+✔ **Static analysis**
+- Pylint run on `src/`
+- Final score: **10.00 / 10**
+- Evidence: `pylint_10of10.png`
+
+✔ **Testing**
+- Pytest suite passes with **100% coverage**
+- Database schema initialized safely for CI and grading
+- Tests do not rely on live scraping
+
+✔ **Database hardening**
+- No hard-coded credentials
+- Configuration via environment variables
+- Application runs with a least-privilege PostgreSQL user
+
+
+✔ **Dependency analysis**
+- Dependency graph generated via pydeps + Graphviz
+- File: `dependency.svg`
+
+✔ **Snyk Security scanning**
+- Dependency scan results: `snyk-analysis.png`
+- (Extra credit) SAST results: `snyk-code-test.png`
+
+✔ **Packaging & reproducibility**
+- `setup.py` included for installable package
+- Fresh install verified via:
+  - `pip`
+  - `uv`
+- Editable installs supported (`pip install -e .`)
+
+✔ **CI enforcement**
+- GitHub Actions workflow enforces:
+  - Pylint (fail-under=10)
+  - Pytest + coverage
+  - Dependency graph generation
+  - Snyk dependency scan
+  - Screenshot of successful CI run included
+  - File: `actions_success_module_5.png`
+
+---
+
+## ✅ PDF Deliverable — Detailed Security & Assurance Report
+
+**✔ Included with submission:** `MODULE_5.pdf`
+
+This PDF serves as the **written deliverable** for Module 5 and provides
+the full narrative explanations required by the assignment rubric. It expands on the
+checklist items above with technical detail, justification, and screenshots.
+
+		** 🔹 Installation & Reproducibility
+
+		- Fresh install instructions using **pip + virtual environments**
+		- Deterministic installation using **uv**
+		- Editable installs via `pip install -e .`
+		- Verification steps for graders running in a clean environment
+
+		---
+
+		** 🔹 SQL Injection Defenses
+
+		- Confirmation that **no runtime user input** influences SQL execution
+		- Elimination of all string-built SQL (no f-strings, concatenation, or `.format`)
+		- Clear separation of SQL statements from execution
+		- Explicit LIMIT enforcement where semantically meaningful
+		- Explanation of why aggregate queries correctly omit LIMIT
+
+		---
+
+		** 🔹 Least-Privilege Database Configuration
+
+		- Rationale for a dedicated `app_user`
+		- Exact privileges granted and justification for each
+		- Confirmation that the application user:
+		- is **not a superuser**
+		- does **not** own tables
+		- cannot modify schema
+		- SQL snippets used to configure permissions
+
+		---
+
+		** 🔹 Dependency Graph Analysis
+
+		- Explanation of `dependency.svg`
+		- Justification of `app.py` as the top-level consumer
+		- Description of module layering and absence of cyclic dependencies
+
+		---
+
+		** 🔹 Packaging Rationale (`setup.py`)
+
+		- Why packaging was required for this project
+		- How `setup.py` ensures consistent imports across:
+		- local runs
+		- automated tests
+		- CI and grading environments
+		- Benefits for reproducibility and long-term maintainability
+
+		---
+
+		** 🔹 Security Scanning (Snyk)
+
+		- Dependency scan results (`snyk-analysis.png`)
+		- Static application security testing results (`snyk-code-test.png`)
+		- Discussion of findings and justification for:
+		- zero high-severity issues
+		- development-context medium findings
+
+---
+
+The PDF is intended to be read **in conjunction with this README** and should be used
+as the primary reference for design decisions, security posture, and compliance with all
+Module 5 requirements.
 
 Author
 Navid Ziran
