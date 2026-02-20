@@ -19,11 +19,11 @@ database access. Particular emphasis is placed on eliminating SQL injection risk
 enforcing safe database access patterns, and producing a reproducible, security-checked 
 codebase suitable for real-world deployment.
 
-Starting from the Module 4 application, the project is refactored to use parameterized 
+Starting from the Module 4 application, the project was refactored to use parameterized 
 SQL via psycopg, removing all string-built queries and enforcing explicit LIMIT clauses 
 on database access. Database credentials are externalized using environment variables, 
 and the application is configured to run with a least-privilege PostgreSQL user to 
-minimize blast radius in the event of a compromise.
+minimize the blast radius in the event of a compromise.
 
 In addition to code hardening, the module introduces software supply-chain practices. 
 Static analysis is enforced using Pylint with a perfect lint score, dependencies are 
@@ -46,26 +46,34 @@ Environment Requirements
 • PostgreSQL 15 or newer
 • pip
 • virtualenv (or venv module)
+• uv (optional, for reproducible installs)
 
 ⸻
 
 Project Structure
 
 module_5/
-src/
-app.py — Flask application
-db.py — Secure database connection logic
-load_data.py — Initial data loader
-load_update.py — Incremental update loader
-query_data.py — Analysis queries
-clean_update.py — Data cleaning logic
-tests/ — Pytest test suite (100% coverage)
-requirements.txt — Runtime + tooling dependencies
-setup.py — Installable package definition
-dependency.svg — Python dependency graph
-README.md
-
-⸻
+├── src/
+│   ├── app.py                # Flask application
+│   ├── db.py                 # Secure database connection logic
+│   ├── load_data.py          # Initial data loader
+│   ├── load_update.py        # Incremental update loader
+│   ├── query_data.py         # Analysis queries
+│   └── clean_update.py       # Data cleaning logic
+│
+├── tests/                    # Pytest test suite (100% coverage)
+│
+├── docs/                     # Sphinx documentation source
+│
+├── applicant_data_update.json
+├── cleaned_applicant_data_update.json
+├── llm_extend_applicant_data.json
+│
+├── dependency.svg            # Python dependency graph (pydeps)
+├── requirements.txt          # Runtime + tooling dependencies
+├── setup.py                  # Installable package definition
+├── pytest.ini                # Pytest configuration
+├── README.md                 # Project documentation
 
 Environment Variables
 
@@ -78,24 +86,30 @@ Required variables:
 	•	DB_USER
 	•	DB_PASSWORD
 
-Alternatively, DATABASE_URL may be provided for compatibility.
+	DATABASE_URL is supported for compatibility, but the application
+	is intentionally designed around discrete environment variables 
+	to satisfy Module 5 requirements.
 
 ⸻
 
-Grader Setup Instructions (Fresh Environment, No Password)
+Setup Instructions (Fresh Environment, No Password)
 	
 	1.	Start PostgreSQL
 
 			psql -U postgres
 			CREATE DATABASE gradcafe;
 			\q
+
 	2.	Create a least-privilege user (no password)
 
 			psql -U postgres -d gradcafe
+
 			CREATE ROLE app_user LOGIN;
 			GRANT CONNECT ON DATABASE gradcafe TO app_user;
 			GRANT USAGE ON SCHEMA public TO app_user;
 			GRANT SELECT, INSERT ON TABLE public.applicants TO app_user;
+			GRANT USAGE ON SEQUENCE public.applicants_p_id_seq TO app_user;
+
 			\q
 
 	3.	Set required environment variables
@@ -105,7 +119,9 @@ Grader Setup Instructions (Fresh Environment, No Password)
 			export DB_NAME=gradcafe
 			export DB_USER=app_user
 			export DB_PASSWORD=””  # empty, since no password
-			Alternatively, you can provide a single DATABASE_URL:
+
+			Alternatively, as mentioned above, you can provide a single DATABASE_URL:
+
 			export DATABASE_URL=“postgresql://app_user@localhost:5432/gradcafe”
 
 	4.	Install dependencies and run the app
@@ -123,17 +139,9 @@ Grader Setup Instructions (Fresh Environment, No Password)
 
 	6.  Run pytest
 			
+			pytest 
+
 			All tests should pass with 100% coverage.
-
-⸻
-
-Testing
-
-Run the full test suite:
-
-    pytest
-
-All tests pass with 100% coverage.
 
 ⸻
 
@@ -155,16 +163,22 @@ avoiding false positives from test scaffolding or third-party packages.
 
 Dependency Graph
 
-The file dependency.svg shows module-level dependencies generated with pydeps.
+The file dependency.svg shows module-level dependencies generated using pydeps and Graphviz.
+
+Command used: 
+
+	pydeps src/app.py --noshow -T svg -o dependency.svg
 
 ⸻
 
 Security Notes
+
 	•	Uses a least-privilege PostgreSQL user
 	•	No hard-coded credentials
 	•	Parameterized SQL throughout
 	•	No dynamic SQL from user input
-	•	Database schema creation is separated from runtime execution
+	•	Database schema creation is intentionally separated 
+	    from application runtime execution
 
 ⸻
 
@@ -197,8 +211,6 @@ Notes
 
 ---
 
----
-
 ## Deliverables Checklist
 
 ✔ **Secure SQL refactor**
@@ -213,7 +225,8 @@ Notes
 
 ✔ **Testing**
 - Pytest suite passes with **100% coverage**
-- Database schema initialized safely for CI and grading
+- Database schema initialized safely for CI; application runtime uses a 
+  least-privilege user
 - Tests do not rely on live scraping
 
 ✔ **Database hardening**
@@ -256,69 +269,63 @@ This PDF serves as the **written deliverable** for Module 5 and provides
 the full narrative explanations required by the assignment rubric. It expands on the
 checklist items above with technical detail, justification, and screenshots.
 
-		** 🔹 Installation & Reproducibility
+---
 
-		- Fresh install instructions using **pip + virtual environments**
-		- Deterministic installation using **uv**
-		- Editable installs via `pip install -e .`
-		- Verification steps for graders running in a clean environment
-
-		---
-
-		** 🔹 SQL Injection Defenses
-
-		- Confirmation that **no runtime user input** influences SQL execution
-		- Elimination of all string-built SQL (no f-strings, concatenation, or `.format`)
-		- Clear separation of SQL statements from execution
-		- Explicit LIMIT enforcement where semantically meaningful
-		- Explanation of why aggregate queries correctly omit LIMIT
-
-		---
-
-		** 🔹 Least-Privilege Database Configuration
-
-		- Rationale for a dedicated `app_user`
-		- Exact privileges granted and justification for each
-		- Confirmation that the application user:
-		- is **not a superuser**
-		- does **not** own tables
-		- cannot modify schema
-		- SQL snippets used to configure permissions
-
-		---
-
-		** 🔹 Dependency Graph Analysis
-
-		- Explanation of `dependency.svg`
-		- Justification of `app.py` as the top-level consumer
-		- Description of module layering and absence of cyclic dependencies
-
-		---
-
-		** 🔹 Packaging Rationale (`setup.py`)
-
-		- Why packaging was required for this project
-		- How `setup.py` ensures consistent imports across:
-		- local runs
-		- automated tests
-		- CI and grading environments
-		- Benefits for reproducibility and long-term maintainability
-
-		---
-
-		** 🔹 Security Scanning (Snyk)
-
-		- Dependency scan results (`snyk-analysis.png`)
-		- Static application security testing results (`snyk-code-test.png`)
-		- Discussion of findings and justification for:
-		- zero high-severity issues
-		- development-context medium findings
+### 🔹 Installation & Reproducibility
+- Fresh install instructions using **pip + virtual environments**
+- Deterministic installation using **uv**
+- Editable installs via `pip install -e .`
+- Verification steps for graders running in a clean environment
 
 ---
 
-The PDF is intended to be read **in conjunction with this README** and should be used
-as the primary reference for design decisions, security posture, and compliance with all
-Module 5 requirements.
+### 🔹 SQL Injection Defenses
+- Confirmation that **no runtime user input** influences SQL execution
+- Elimination of all string-built SQL (no f-strings, concatenation, or `.format`)
+- Clear separation of SQL statements from execution
+- Explicit LIMIT enforcement where semantically meaningful
+- Explanation of why aggregate queries correctly omit LIMIT
+
+---
+
+### 🔹 Least-Privilege Database Configuration
+- Rationale for a dedicated `app_user`
+- Exact privileges granted and justification for each
+- Confirmation that the application user:
+  - is **not a superuser**
+  - does **not** own tables
+  - cannot modify schema
+- SQL snippets used to configure permissions
+
+---
+
+### 🔹 Dependency Graph Analysis
+- Explanation of `dependency.svg`
+- Justification of `app.py` as the top-level consumer
+- Description of module layering and absence of cyclic dependencies
+
+---
+
+### 🔹 Packaging Rationale (`setup.py`)
+- Why packaging was required for this project
+- How `setup.py` ensures consistent imports across:
+  - local runs
+  - automated tests
+  - CI and grading environments
+- Benefits for reproducibility and long-term maintainability
+
+---
+
+### 🔹 Security Scanning (Snyk)
+- Dependency scan results (`snyk-analysis.png`)
+- Static application security testing results (`snyk-code-test.png`)
+- Discussion of findings and justification for:
+  - zero high-severity issues
+  - development-context medium findings
+
+The PDF deliverable is intended to be read **in conjunction with this README** and should be used as the primary reference for design decisions, security posture, and compliance with all Module 5 requirements.
+
+---
 
 Author
 Navid Ziran
